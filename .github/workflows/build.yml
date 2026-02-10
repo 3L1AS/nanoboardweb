@@ -131,7 +131,8 @@ jobs:
             artifacts/**/*.deb
             artifacts/**/*.exe
             artifacts/**/*.msi
-            artifacts/**/nanoboard*
+            artifacts/**/*.rpm
+          fail_on_unmatched_files: true
           body: |
             # nanoboard ${{ github.ref_name }}
 
