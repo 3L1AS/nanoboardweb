@@ -55,7 +55,10 @@ jobs:
         if: matrix.platform.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev \
+          # Try both webkit2gtk versions for compatibility
+          sudo apt-get install -y libwebkit2gtk-4.1-dev || \
+          sudo apt-get install -y libwebkit2gtk-4.0-dev
+          sudo apt-get install -y \
             build-essential \
             curl \
             wget \
@@ -74,19 +77,33 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_BUNDLE_SKIP_SIGNING: true
 
-      - name: Upload artifacts
+      - name: Upload artifacts (Linux/Windows)
+        if: matrix.platform.os != 'macos-latest'
         uses: actions/upload-artifact@v4
         with:
           name: nanoboard-${{ matrix.platform.target }}
-          # 使用通配符匹配不同平台的构建路径
-          path: |
-            src-tauri/target/release/bundle/*
-            src-tauri/target/*/release/bundle/*
+          path: src-tauri/target/release/bundle/*
+          if-no-files-found: warn
+
+      - name: Upload artifacts (macOS x86_64)
+        if: matrix.platform.os == 'macos-latest' && matrix.platform.target == 'x86_64-apple-darwin'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nanoboard-${{ matrix.platform.target }}
+          path: src-tauri/target/x86_64-apple-darwin/release/bundle/*
+          if-no-files-found: warn
+
+      - name: Upload artifacts (macOS ARM)
+        if: matrix.platform.os == 'macos-latest' && matrix.platform.target == 'aarch64-apple-darwin'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nanoboard-${{ matrix.platform.target }}
+          path: src-tauri/target/aarch64-apple-darwin/release/bundle/*
           if-no-files-found: warn
 
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
 
     steps:
@@ -98,18 +115,51 @@ jobs:
         with:
           path: artifacts
 
-      - name: Find all release assets
-        id: find-assets
+      - name: List all files in artifacts
         run: |
-          echo "files=$(find artifacts -type f \( -name '*.dmg' -o -name '*.msi' -o -name '*.exe' -o -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' -o -name '*.tar.gz' -o -name '*.tar.bz2' -o -name '*.tar.xz' \) | tr '\n' ' ')" >> $GITHUB_OUTPUT
+          echo "=== All files in artifacts ==="
+          find artifacts -type f -exec ls -lh {} \;
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           draft: true
           prerelease: false
-          files: ${{ steps.find-assets.outputs.files }}
-          generate_release_notes: true
+          files: |
+            artifacts/**/*.dmg
+            artifacts/**/*.AppImage
+            artifacts/**/*.deb
+            artifacts/**/*.exe
+            artifacts/**/*.msi
+            artifacts/**/nanoboard*
+          body: |
+            # nanoboard ${{ github.ref_name }}
+
+            ## Downloads
+
+            | Platform | Download |
+            |----------|----------|
+            | macOS (Apple Silicon) | nanoboard-aarch64-apple-darwin |
+            | macOS (Intel) | nanoboard-x86_64-apple-darwin |
+            | Linux | nanoboard-x86_64-unknown-linux-gnu |
+            | Windows | nanoboard-x86_64-pc-windows-msvc |
+
+            ## Installation
+
+            ### macOS
+            ```bash
+            chmod +x nanoboard
+            ./nanoboard
+            ```
+
+            ### Linux
+            ```bash
+            chmod +x nanoboard
+            ./nanoboard
+            ```
+
+            ### Windows
+            Double-click `nanoboard.exe`
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
