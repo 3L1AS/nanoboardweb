@@ -4,12 +4,14 @@
 
 <img src="public/assets/logo.png" alt="Nanoboard Logo" width="120" height="120">
 
-**一个现代化的桌面管理界面，用于管理 Nanobot AI 助手**
+**一个极轻量化的 nanobot 管理助手**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+**An Ultra-lightweight nanobot Management Assistant**
+
 [![Rust](https://img.shields.io/badge/Rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
 [![React](https://img.shields.io/badge/React-18%2B-blue.svg)](https://react.dev/)
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131.svg)](https://tauri.app/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 </div>
 
@@ -17,47 +19,45 @@
 
 ## ✨ 特性
 
-- 📊 **可视化仪表盘** - 实时监控 Nanobot 运行状态和系统资源
-- ⚙️ **配置编辑器** - 使用 Monaco Editor 可视化编辑配置文件
-- 🚀 **快速启动** - 一键启动/停止 Nanobot Gateway
-- 📋 **日志监控** - 实时查看和过滤应用日志
-- 💾 **会话管理** - 查看、编辑和管理 AI 记忆与工作区文件
-- 🎨 **现代化界面** - 基于 TailwindCSS 的精美 UI 设计
-- 🔧 **手动配置** - 支持直接编辑 JSON/YAML 配置文件
+- **可视化仪表盘** - 实时监控 Nanobot 运行状态和系统资源
+- **配置编辑** - 使用 Monaco Editor 可视化编辑配置文件
+- **快速启动** - 一键启动/停止 Nanobot Gateway
+- **日志监控** - 实时查看和过滤应用日志
+- **文件管理** - 查看、编辑和管理工作区文件
+- **轻量化** - 基于 Tauri 构建，性能优越且资源占用低
 
-## 📸 演示截图
+## 📸 演示
 
-### 仪表盘
-实时监控 Nanobot 运行状态和系统资源使用情况
+<div align="center">
+
 <table>
   <tr>
-    <td><img src="public/screenshots/dashboard.png" alt="仪表盘" width="800"/></td>
+    <td align="center">
+      <img src="public/screenshots/dashboard.png" alt="仪表盘" width="400"/>
+      <br/>
+      监控状态/资源/配置·快速操作
+    </td>
+    <td align="center">
+      <img src="public/screenshots/log-monitor.png" alt="日志监控" width="400"/>
+      <br/>
+      实时查看·过滤应用日志
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="public/screenshots/session-manager.png" alt="会话管理" width="400"/>
+      <br/>
+      查看会话·管理文件
+    </td>
+    <td align="center">
+      <img src="public/screenshots/config-editor.png" alt="配置编辑器" width="400"/>
+      <br/>
+      可视化配置·快速编辑
+    </td>
   </tr>
 </table>
 
-### 配置编辑器
-可视化编辑配置文件，支持表单和代码两种模式
-<table>
-  <tr>
-    <td><img src="public/screenshots/config-editor.png" alt="配置编辑器" width="800"/></td>
-  </tr>
-</table>
-
-### 日志监控
-实时查看和过滤应用日志，支持关键词搜索和正则表达式
-<table>
-  <tr>
-    <td><img src="public/screenshots/log-monitor.png" alt="日志监控" width="800"/></td>
-  </tr>
-</table>
-
-### 文件管理
-查看和管理 AI 会话记忆与工作区文件
-<table>
-  <tr>
-    <td><img src="public/screenshots/session-manager.png" alt="文件管理" width="800"/></td>
-  </tr>
-</table>
+</div>
 
 ## 🚀 快速开始
 
