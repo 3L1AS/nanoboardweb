@@ -79,19 +79,143 @@ fn get_user_path() -> Vec<String> {
     paths
 }
 
-/// 查找命令的完整路径
-/// 在用户的 PATH 中查找命令
-fn find_command(command: &str) -> Option<String> {
-    let paths = get_user_path();
+/// 使用系统 which/where 命令查找命令
+/// 这是最可靠的方法，因为它会检查当前激活的 Python 环境
+fn find_via_which(command: &str) -> Option<String> {
+    #[cfg(unix)]
+    let which_cmd = "which";
 
+    #[cfg(windows)]
+    let which_cmd = "where";
+
+    let output = Command::new(which_cmd)
+        .arg(command)
+        .output()
+        .ok()?;
+
+    if output.status.success() {
+        let path = String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .next()?
+            .trim()
+            .to_string();
+        if !path.is_empty() {
+            log::debug!("通过 {} 找到 {}: {}", which_cmd, command, path);
+            return Some(path);
+        }
+    }
+    None
+}
+
+/// 专门查找 pip 命令（避免递归调用）
+/// 按优先级查找 pip 命令
+fn find_command_pip() -> Option<String> {
+    // 方法 1: 通过 which/where 查找
+    if let Some(pip) = find_via_which("pip3") {
+        return Some(pip);
+    }
+    if let Some(pip) = find_via_which("pip") {
+        return Some(pip);
+    }
+
+    // 方法 2: 在常见路径中查找
+    if let Some(home) = env::var("HOME").ok() {
+        for pip_name in &["pip3", "pip"] {
+            for bin_dir in &[
+                format!("{}/miniconda3/bin", home),
+                format!("{}/anaconda3/bin", home),
+                format!("{}/.local/bin", home),
+                format!("{}/Library/Python/3.*/bin", home),
+            ] {
+                let full_path = Path::new(bin_dir).join(pip_name);
+                if full_path.exists() {
+                    return Some(full_path.to_string_lossy().to_string());
+                }
+            }
+        }
+    }
+
+    None
+}
+
+/// 通过 pip show 查找包的安装位置
+/// 适配 conda 虚拟环境、venv 等不同安装方式
+fn find_via_pip(package: &str) -> Option<String> {
+    let pip_cmd = find_command_pip().unwrap_or_else(|| "pip3".to_string());
+
+    let output = Command::new(&pip_cmd)
+        .args(&["show", package])
+        .output()
+        .ok()?;
+
+    if output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        for line in stdout.lines() {
+            if line.starts_with("Location:") {
+                let location = line.trim_start_matches("Location:").trim();
+
+                // 根据平台确定可执行文件目录
+                let bin_dir = if cfg!(windows) { "Scripts" } else { "bin" };
+
+                // 尝试找到对应的可执行文件
+                // pip show 显示的是 site-packages 目录
+                // 可执行文件通常在 site-packages 的上层 bin/Scripts 目录
+                let site_packages = Path::new(location);
+                let mut bin_path = site_packages.to_path_buf();
+
+                // 如果路径包含 site-packages，找到其父目录的 bin
+                if site_packages.ends_with("site-packages") {
+                    if let Some(parent) = site_packages.parent() {
+                        bin_path = parent.join(bin_dir);
+                    }
+                }
+
+                // 尝试多种可能的命令名称
+                let exe_ext = if cfg!(windows) { ".exe" } else { "" };
+                for cmd_name in &["nanobot", "nanobot-ai"] {
+                    let cmd_path = bin_path.join(format!("{}{}", cmd_name, exe_ext));
+                    if cmd_path.exists() {
+                        log::debug!("通过 pip show 找到 {}: {}", command, cmd_path.display());
+                        return Some(cmd_path.to_string_lossy().to_string());
+                    }
+                }
+            }
+        }
+    }
+    log::debug!("通过 pip show 未找到 {}", command);
+    None
+}
+
+/// 查找命令的完整路径
+/// 使用多种方法查找命令，按优先级顺序：
+/// 1. 使用系统 which/where 命令（最可靠，会检查当前激活的环境）
+/// 2. 通过 pip show 查找（适配 conda/venv 等虚拟环境）
+/// 3. 遍历预设的 PATH 列表（兼容旧逻辑）
+fn find_command(command: &str) -> Option<String> {
     log::debug!("正在查找命令: {}", command);
-    log::debug!("搜索路径列表: {:?}", paths);
+
+    // 方法 1: 使用系统 which/where 命令（最可靠）
+    if let Some(path) = find_via_which(command) {
+        return Some(path);
+    }
+
+    // 方法 2: 通过 pip show 查找（适配 conda/venv 等虚拟环境）
+    // 只对 nanobot 相关命令启用此方法
+    if command == "nanobot" {
+        if let Some(path) = find_via_pip("nanobot-ai") {
+            return Some(path);
+        }
+    }
+
+    // 方法 3: 遍历预设的 PATH 列表（降级方案，兼容旧逻辑）
+    let paths = get_user_path();
+    log::debug!("尝试在预设路径中查找: {:?}", paths);
 
     for path_dir in paths {
         let full_path = Path::new(&path_dir).join(command);
         log::debug!("检查路径: {}", full_path.display());
         if full_path.exists() {
-            log::debug!("找到命令: {}", full_path.display());
+            log::debug!("在预设路径中找到: {}", full_path.display());
             return Some(full_path.to_string_lossy().to_string());
         }
     }
@@ -596,14 +720,10 @@ pub async fn get_nanobot_version() -> Result<serde_json::Value, String> {
     let nanobot_cmd = match find_command("nanobot") {
         Some(cmd) => cmd,
         None => {
-            // 返回搜索的路径信息用于调试
-            let paths = get_user_path();
-            let paths_str = paths.join(", ");
             return Ok(json!({
                 "installed": false,
                 "version": null,
-                "message": format!("未找到 nanobot。搜索路径: {}", paths_str),
-                "searched_paths": paths
+                "message": "未找到 nanobot"
             }))
         }
     };
@@ -625,7 +745,7 @@ pub async fn get_nanobot_version() -> Result<serde_json::Value, String> {
         Ok(json!({
             "installed": false,
             "version": null,
-            "message": "nanobot未安装或不在PATH中"
+            "message": "未找到 nanobot"
         }))
     }
 }

@@ -202,56 +202,6 @@ npm run tauri:build
 
 构建产物位于 `src-tauri/target/release/bundle/`
 
-## 🐛 故障排除
-
-### 无法启动 Nanobot
-
-**检查 Nanobot 是否已安装**：
-```bash
-nanobot --version
-```
-
-如未安装，请访问 [nanobot-ai](https://github.com/HKUDS/nanobot) 查看安装说明。
-
-### 配置文件未找到
-
-运行初始化命令：
-```bash
-nanobot onboard
-```
-
-### 日志监控不显示日志
-
-1. 确保 Nanobot 正在运行
-2. 检查日志文件是否存在：`~/.nanobot/logs/nanobot.log`
-3. 尝试停止监控后重新启动
-
-### 构建失败
-
-确保所有依赖已正确安装：
-```bash
-# 检查 Rust 版本
-rustc --version
-
-# 检查 Node.js 版本
-node --version
-
-# 重新安装依赖
-rm -rf node_modules
-npm install
-```
-
-### 端口被占用
-
-如果 5173 端口被占用：
-```bash
-# 查找占用端口的进程
-lsof -i :5173
-
-# 杀死进程（替换 PID）
-kill <PID>
-```
-
 ## 🗺️ 开发路线图
 
 - [x] 基础仪表盘功能
