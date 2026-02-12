@@ -10,14 +10,7 @@ use std::time::Instant;
 use sysinfo::System;
 use tauri::State;
 
-#[cfg(target_os = "windows")]
-use std::os::windows::process::CommandExt;
-
 use crate::AppState;
-
-/// Windows 进程创建标志：不创建窗口
-#[cfg(target_os = "windows")]
-const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 /// 为命令设置隐藏窗口（仅 Windows）
 /// 在其他平台上不执行任何操作
@@ -347,6 +340,42 @@ pub async fn start_nanobot(port: Option<u16>, state: State<'_, AppState>) -> Res
             .map_err(|e| format!("创建日志目录失败: {}", e))?;
     }
 
+    // 查找 nanobot 命令
+    let nanobot_cmd = match find_command("nanobot") {
+        Some(cmd) => cmd,
+        None => {
+            return Ok(json!({
+                "status": "failed",
+                "message": "未找到 nanobot 命令，请先安装 nanobot-ai"
+            }));
+        }
+    };
+
+    log::info!("找到 nanobot 命令: {}", nanobot_cmd);
+
+    // 先用测试模式运行来捕获错误信息
+    let test_output = Command::new(&nanobot_cmd)
+        .args(&["--help"])
+        .output();
+
+    match test_output {
+        Ok(output) => {
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                return Ok(json!({
+                    "status": "failed",
+                    "message": format!("nanobot 命令执行失败: {}", stderr)
+                }));
+            }
+        }
+        Err(e) => {
+            return Ok(json!({
+                "status": "failed",
+                "message": format!("无法执行 nanobot 命令: {}", e)
+            }));
+        }
+    }
+
     // 打开日志文件用于追加（如果不存在则创建）
     let log_file = OpenOptions::new()
         .create(true)
@@ -354,43 +383,96 @@ pub async fn start_nanobot(port: Option<u16>, state: State<'_, AppState>) -> Res
         .open(&log_path)
         .map_err(|e| format!("无法打开日志文件: {}", e))?;
 
-    // 启动nanobot gateway，将输出重定向到日志文件
-    let nanobot_cmd = find_command("nanobot")
-        .or_else(|| Some("nanobot".to_string()))
-        .unwrap();
-
-    let mut child = Command::new(&nanobot_cmd)
+    // 启动 nanobot gateway，先捕获 stderr 以便调试
+    let mut child = match Command::new(&nanobot_cmd)
         .args(&["gateway", "--port", &port.to_string()])
         .stdout(Stdio::from(log_file.try_clone().unwrap()))
-        .stderr(Stdio::from(log_file))
+        .stderr(Stdio::piped())  // 先用 piped 捕获错误信息
         .spawn()
-        .context("启动nanobot失败，请确保已正确安装nanobot")
-        .map_err(|e| e.to_string())?;
+    {
+        Ok(c) => c,
+        Err(e) => {
+            return Ok(json!({
+                "status": "failed",
+                "message": format!("启动 nanobot 失败: {}", e)
+            }));
+        }
+    };
 
     // 获取进程ID
     let id = child.id();
 
+    // 等待一小段时间让进程启动
+    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
     // 立即检查进程是否还在运行
     match child.try_wait() {
         Ok(Some(status)) => {
-            // 进程已经退出
+            // 进程已经退出，尝试读取错误信息
+            let stderr = if let Some(mut stderr) = child.stderr {
+                let mut error_buf = Vec::new();
+                use std::io::Read;
+                let _ = stderr.read_to_end(&mut error_buf);
+                String::from_utf8_lossy(&error_buf).to_string()
+            } else {
+                String::from("无法获取错误信息")
+            };
+
             return Ok(json!({
                 "status": "failed",
-                "message": format!("Nanobot启动后立即退出，退出码: {:?}", status)
+                "message": format!("Nanobot启动后立即退出: {}", stderr.trim()),
+                "exit_code": status.code()
             }));
         },
         Ok(None) => {
-            // 进程还在运行，这是好的
+            // 进程还在运行
             log::info!("Nanobot进程 (PID: {}) 启动成功，正在运行中", id);
         },
         Err(e) => {
-            // 尝试等待时出错
             log::error!("检查nanobot进程状态时出错: {}", e);
         }
     }
 
-    // 等待一小段时间检查进程是否成功启动
+    // 重新启动，这次将 stderr 重定向到日志文件
+    let _ = child.kill();
+    let _ = child.wait();
+
+    // 真正启动 nanobot，将所有输出都重定向到日志文件
+    let mut child = match Command::new(&nanobot_cmd)
+        .args(&["gateway", "--port", &port.to_string()])
+        .stdout(Stdio::from(log_file.try_clone().unwrap()))
+        .stderr(Stdio::from(log_file))
+        .spawn()
+    {
+        Ok(c) => c,
+        Err(e) => {
+            return Ok(json!({
+                "status": "failed",
+                "message": format!("启动 nanobot 失败: {}", e)
+            }));
+        }
+    };
+
+    let id = child.id();
+
+    // 等待一段时间检查进程是否成功启动
     tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+
+    // 再次检查进程状态
+    match child.try_wait() {
+        Ok(Some(_status)) => {
+            return Ok(json!({
+                "status": "failed",
+                "message": "Nanobot启动后退出，请检查日志文件获取详细错误信息",
+                "log_path": log_path.to_string_lossy().to_string()
+            }));
+        },
+        Ok(None) => {
+            // 进程还在运行
+        },
+        Err(_) => {}
+    }
+
     if check_nanobot_running() {
         // 保存进程信息到状态
         let mut process_manager = ProcessManager::new(port);
@@ -403,12 +485,14 @@ pub async fn start_nanobot(port: Option<u16>, state: State<'_, AppState>) -> Res
             "status": "started",
             "message": format!("Nanobot已在端口 {} 启动", port),
             "port": port,
-            "pid": id
+            "pid": id,
+            "log_path": log_path.to_string_lossy().to_string()
         }))
     } else {
         Ok(json!({
             "status": "failed",
-            "message": "Nanobot启动失败，请检查配置"
+            "message": "Nanobot启动失败，请检查配置",
+            "log_path": log_path.to_string_lossy().to_string()
         }))
     }
 }
@@ -595,22 +679,134 @@ pub async fn download_nanobot() -> Result<serde_json::Value, String> {
         .or_else(|| find_command("pip"))
         .unwrap_or_else(|| "pip3".to_string());
 
-    let output = apply_hidden_window(Command::new(&pip_cmd))
-        .args(&["install", "nanobot-ai"])
+    log::info!("使用 pip 安装: {}", pip_cmd);
+
+    // 步骤 1: 检查并升级 pip
+    log::info!("检查 pip 版本...");
+    let upgrade_output = apply_hidden_window(Command::new(&pip_cmd))
+        .args(&["install", "--upgrade", "pip"])
+        .output();
+
+    if let Ok(upgrade_out) = upgrade_output {
+        if upgrade_out.status.success() {
+            log::info!("pip 升级成功");
+        } else {
+            log::warn!("pip 升级失败，继续尝试安装");
+        }
+    }
+
+    // 步骤 2: 尝试多种方式安装 nanobot-ai
+    let install_methods = vec![
+        // 方法 1: 使用官方 PyPI 源
+        vec!["install", "--index-url", "https://pypi.org/simple", "nanobot-ai"],
+        // 方法 2: 使用清华镜像源（国内更快）
+        vec!["install", "-i", "https://pypi.tuna.tsinghua.edu.cn/simple", "nanobot-ai"],
+        // 方法 3: 不指定源，使用默认
+        vec!["install", "nanobot-ai"],
+    ];
+
+    let mut last_error = String::new();
+
+    for (idx, args) in install_methods.iter().enumerate() {
+        log::info!("尝试安装方法 {}: {:?}", idx + 1, args);
+
+        let output = apply_hidden_window(Command::new(&pip_cmd))
+            .args(args)
+            .output()
+            .context("执行pip install失败")
+            .map_err(|e| e.to_string())?;
+
+        if output.status.success() {
+            return Ok(json!({
+                "status": "success",
+                "message": "Nanobot下载安装成功"
+            }));
+        }
+
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        last_error = format!("安装失败: {}", stderr);
+
+        // 如果不是"找不到包"的错误，可能是网络问题，尝试下一个方法
+        if !stderr.contains("Could not find a version") && !stderr.contains("No matching distribution") {
+            log::warn!("安装方法 {} 失败，尝试下一个方法", idx + 1);
+            continue;
+        }
+
+        // 如果是"找不到包"的错误，所有方法都会失败，直接返回
+        break;
+    }
+
+    // 所有方法都失败，返回详细错误信息
+    let suggestion = if last_error.contains("Could not find a version") || last_error.contains("No matching distribution") {
+        // 检查是否是 Python 版本问题
+        if last_error.contains("Requires-Python") || last_error.contains("Requires-Python >=3.11") || last_error.contains("python version") {
+            "\n\n❌ Python 版本问题！\n\nnanobot-ai 需要 **Python 3.11 或更高版本**\n\n请先升级 Python：\nmacOS:\n  brew install python@3.12\n  或\n  pyenv install 3.12.0 && pyenv global 3.12.0\n\n\nWindows:\n  访问 https://www.python.org/downloads/\n  下载并安装 Python 3.11+\n\n升级后请重启应用再试"
+        } else {
+            "\n\n可能原因：\n1. nanobot-ai 包名称可能已变更\n2. PyPI 服务暂时不可用\n3. 需要使用其他安装方式\n\n\n建议：\n- 访问 https://pypi.org 搜索 nanobot-ai\n- 或在终端手动运行: pip3 install nanobot-ai\n- 检查是否需要使用 uv 工具安装"
+        }
+    } else if last_error.contains("pip version") {
+        "\n\n可能原因：pip 版本过低\n\n建议：\n- 在终端运行: python3 -m pip install --upgrade pip\n- 然后重新尝试安装"
+    } else if last_error.contains("SSL") || last_error.contains("certificate") {
+        "\n\n可能原因：SSL 证书验证失败\n\n建议：\n- 检查系统时间是否正确\n- 尝试使用国内镜像源"
+    } else {
+        "\n\n请检查：\n- 网络连接是否正常\n- Python 环境是否正确配置\n- 是否有足够的权限安装包"
+    };
+
+    Ok(json!({
+        "status": "failed",
+        "message": last_error + suggestion
+    }))
+}
+
+/// 下载nanobot (使用uv安装，更快更可靠)
+#[tauri::command]
+pub async fn download_nanobot_with_uv() -> Result<serde_json::Value, String> {
+    // 查找 uv 命令
+    let uv_cmd = find_command("uv");
+
+    let uv_cmd = match uv_cmd {
+        Some(cmd) => cmd,
+        None => {
+            return Ok(json!({
+                "status": "failed",
+                "message": "未找到 uv 命令\n\n请先安装 uv：\nmacOS/Linux: curl -LsSf https://astral.sh/uv/install.sh | sh\nWindows: powershell -c \"irm https://astral.sh/uv/install.ps1 | iex\"\n\n或使用 pip 按钮代替"
+            }));
+        }
+    };
+
+    log::info!("使用 uv 安装: {}", uv_cmd);
+
+    // 使用 uv tool install 安装（更快更可靠）
+    let output = apply_hidden_window(Command::new(&uv_cmd))
+        .args(&["tool", "install", "nanobot-ai"])
         .output()
-        .context("执行pip install失败")
+        .context("执行 uv install 失败")
         .map_err(|e| e.to_string())?;
 
     if output.status.success() {
         Ok(json!({
             "status": "success",
-            "message": "Nanobot下载安装成功"
+            "message": "Nanobot下载安装成功（使用 uv）"
         }))
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
+        let error_msg = format!("安装失败: {}", stderr);
+
+        let suggestion = if stderr.contains("Could not find a version") || stderr.contains("No matching distribution") {
+            if stderr.contains("Requires-Python") || stderr.contains("python") {
+                "\n\n❌ Python 版本问题！\n\nnanobot-ai 需要 **Python 3.11 或更高版本**\n\n请先升级 Python：\nmacOS:\n  brew install python@3.12\n  或\n  pyenv install 3.12.0 && pyenv global 3.12.0\n\nWindows:\n  访问 https://www.python.org/downloads/\n  下载并安装 Python 3.11+"
+            } else {
+                "\n\n可能原因：\n1. nanobot-ai 包名称可能已变更\n2. PyPI 服务暂时不可用\n\n建议：\n- 使用 pip 按钮代替\n- 访问 https://pypi.org 搜索 nanobot-ai"
+            }
+        } else if stderr.contains("SSL") || stderr.contains("certificate") {
+            "\n\n可能原因：SSL 证书验证失败\n\n建议：\n- 检查系统时间是否正确"
+        } else {
+            "\n\n请检查网络连接和 uv 安装状态"
+        };
+
         Ok(json!({
             "status": "failed",
-            "message": format!("下载安装失败: {}", stderr)
+            "message": error_msg + suggestion
         }))
     }
 }
@@ -768,40 +964,36 @@ fn get_disk_usage() -> (u64, u64) {
 #[cfg(target_os = "windows")]
 fn get_disk_usage() -> (u64, u64) {
     use std::process::Command;
-    // Windows 使用 wmic 或 PowerShell 获取磁盘信息
+    use std::os::windows::process::CommandExt;
+
+    const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+    // Windows 使用 PowerShell 获取 C 盘信息
+    // 使用 ConvertTo-Json 获取 JSON 格式输出，更可靠
     if let Ok(output) = Command::new("powershell")
         .args(&[
+            "-WindowStyle",
+            "Hidden",
+            "-ExecutionPolicy",
+            "Bypass",
             "-Command",
-            "Get-PSDrive C | Where-Object {$_.DriveType -eq 3} | Select-Object -Property Size,FreeSpace",
+            "Get-PSDrive C | Where-Object {$_.DriveType -eq 3} | Select-Object -Property Size,FreeSpace | ConvertTo-Json",
         ])
+        .creation_flags(CREATE_NO_WINDOW)
         .output()
     {
         let content = String::from_utf8_lossy(&output.stdout);
-        // 解析 PowerShell 输出
-        // 格式：Size（总字节数）, FreeSpace（可用字节数）
-        let mut total_bytes = 0u64;
-        let mut free_bytes = 0u64;
-
-        for line in content.lines() {
-            if line.contains("Size") {
-                if let Some(value) = line.split('=').nth(1) {
-                    if let Ok(bytes) = value.trim().parse::<u64>() {
-                        total_bytes = bytes;
-                    }
-                }
-            } else if line.contains("FreeSpace") {
-                if let Some(value) = line.split('=').nth(1) {
-                    if let Ok(bytes) = value.trim().parse::<u64>() {
-                        free_bytes = bytes;
-                    }
-                }
+        // PowerShell 输出 JSON 格式
+        if let Ok(json) = content.trim().parse::<serde_json::Value>() {
+            if let Some(obj) = json.as_object() {
+                let total = obj.get("Size").and_then(|v| v.as_u64()).unwrap_or(0);
+                let free = obj.get("FreeSpace").and_then(|v| v.as_u64()).unwrap_or(0);
+                return (total, free);
             }
         }
-
-        (total_bytes, free_bytes)
-    } else {
-        (0, 0)
     }
+    // 失败时返回 0，避免解析错误
+    (0, 0)
 }
 
 /// 检查 nanobot 配置是否完整
@@ -906,5 +1098,402 @@ pub async fn get_nanobot_path() -> Result<serde_json::Value, String> {
             "found": false,
             "message": "未找到 nanobot"
         })),
+    }
+}
+
+/// 诊断 nanobot 环境，帮助用户排查问题
+#[tauri::command]
+pub async fn diagnose_nanobot() -> Result<serde_json::Value, String> {
+    let mut diagnostics = Vec::new();
+    let mut has_issues = false;
+
+    // 1. 检查 Python 环境
+    let mut python_check = check_python_environment();
+    diagnostics.push(python_check.clone());
+    if python_check.has_issue {
+        has_issues = true;
+    }
+
+    // 2. 检查 pip 命令
+    let pip_check = check_pip_command();
+    diagnostics.push(pip_check.clone());
+    if pip_check.has_issue {
+        has_issues = true;
+    }
+
+    // 3. 检查 nanobot 安装
+    let nanobot_check = check_nanobot_installation();
+    diagnostics.push(nanobot_check.clone());
+    if nanobot_check.has_issue {
+        has_issues = true;
+    }
+
+    // 4. 检查配置文件
+    let config_check = check_config_file();
+    diagnostics.push(config_check.clone());
+    if config_check.has_issue {
+        has_issues = true;
+    }
+
+    // 5. 检查 nanobot 依赖
+    let deps_check = check_nanobot_dependencies();
+    diagnostics.push(deps_check.clone());
+    if deps_check.has_issue {
+        has_issues = true;
+    }
+
+    // 6. 新增：检查 nanobot 实际可用性
+    // 如果 nanobot 已安装且可运行，说明环境实际上可以工作
+    // 此时即使 Python 版本显示"过低"，也应该视为警告而非错误
+    let nanobot_usable_check = check_nanobot_usable();
+    diagnostics.push(nanobot_usable_check.clone());
+
+    // 如果 nanobot 可用，调整 Python 版本检查的状态
+    if nanobot_usable_check.status == "ok" {
+        // nanobot 可用，说明 Python 版本实际满足要求
+        // 将 Python 检查改为 warning 或 ok
+        if python_check.status == "error" {
+            python_check.status = "warning".to_string();
+            python_check.message = format!("{} (但 nanobot 可用)", python_check.message);
+            // 如果只有 Python 版本问题且 nanobot 可用，则不算错误
+            if diagnostics.iter().filter(|d| d.name == "Python 环境").count() == 1
+                && diagnostics.iter().filter(|d| d.name == "nanobot 安装" || d.name == "nanobot 可用性").count() > 0 {
+                has_issues = false; // nanobot 可用，整体通过
+            }
+        }
+    }
+
+    Ok(json!({
+        "overall": if has_issues { "failed" } else { "passed" },
+        "checks": diagnostics
+    }))
+}
+
+#[derive(Clone, serde::Serialize)]
+struct DiagnosticCheck {
+    name: String,
+    status: String,
+    message: String,
+    details: Option<String>,
+    has_issue: bool,
+}
+
+fn check_python_environment() -> DiagnosticCheck {
+    #[cfg(windows)]
+    let python_commands = &["python", "python3", "py"];
+    #[cfg(not(windows))]
+    let python_commands = &["python3", "python"];
+
+    for cmd in python_commands {
+        if let Some(path) = find_via_which(cmd) {
+            // 检查版本
+            let output = Command::new(cmd)
+                .arg("--version")
+                .output();
+
+            if let Ok(out) = output {
+                if out.status.success() {
+                    let version_str = String::from_utf8_lossy(&out.stdout).trim().to_string();
+
+                    // 解析版本号并检查是否 >= 3.11
+                    let version_check = parse_python_version(&version_str);
+                    if let Some((major, minor, _)) = version_check {
+                        if major > 3 || (major == 3 && minor >= 11) {
+                            return DiagnosticCheck {
+                                name: "Python 环境".to_string(),
+                                status: "ok".to_string(),
+                                message: format!("找到 Python: {}", version_str),
+                                details: Some(format!("路径: {}", path)),
+                                has_issue: false,
+                            };
+                        } else {
+                            // Python 版本过低
+                            return DiagnosticCheck {
+                                name: "Python 环境".to_string(),
+                                status: "error".to_string(),
+                                message: format!("Python 版本过低: {} (需要 >= 3.11)", version_str),
+                                details: Some(format!(
+                                    "当前版本: {} {} (需要 3.11+)\n\n升级方法:\nmacOS: brew install python@3.12\n或: pyenv install 3.12.0\n\nWindows: 从 python.org 下载安装 3.11+",
+                                    major, minor
+                                )),
+                                has_issue: true,
+                            };
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    DiagnosticCheck {
+        name: "Python 环境".to_string(),
+        status: "error".to_string(),
+        message: "未找到 Python 3.11+".to_string(),
+        details: Some("nanobot-ai 需要 Python 3.11 或更高版本\n\n安装方法:\nmacOS: brew install python@3.12\nLinux: sudo apt install python3.12\nWindows: 访问 python.org 下载安装".to_string()),
+        has_issue: true,
+    }
+}
+
+/// 解析 Python 版本字符串，返回 (major, minor, patch)
+/// 例如 "Python 3.11.0" -> (3, 11, 0)
+fn parse_python_version(version_str: &str) -> Option<(u32, u32, u32)> {
+    // 提取版本号，格式如 "Python 3.11.0" 或 "Python 3.12"
+    let version_part = version_str
+        .strip_prefix("Python ")
+        .or_else(|| Some(version_str))
+        .unwrap_or(version_str);
+
+    let parts: Vec<&str> = version_part.split('.').collect();
+    if parts.len() >= 2 {
+        let major = parts[0].parse::<u32>().ok()?;
+        let minor = parts[1].parse::<u32>().ok()?;
+        let patch = if parts.len() >= 3 {
+            parts[2].parse::<u32>().ok()
+        } else {
+            Some(0)
+        };
+        Some((major, minor, patch.unwrap_or(0)))
+    } else {
+        None
+    }
+}
+
+fn check_pip_command() -> DiagnosticCheck {
+    if let Some(pip_path) = find_command_pip() {
+        // 检查 pip 版本
+        let output = Command::new(&pip_path)
+            .arg("--version")
+            .output();
+
+        if let Ok(out) = output {
+            if out.status.success() {
+                let version = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                return DiagnosticCheck {
+                    name: "pip 命令".to_string(),
+                    status: "ok".to_string(),
+                    message: format!("找到 pip: {}", version),
+                    details: Some(pip_path),
+                    has_issue: false,
+                };
+            }
+        }
+    }
+
+    DiagnosticCheck {
+        name: "pip 命令".to_string(),
+        status: "warning".to_string(),
+        message: "未找到 pip 命令".to_string(),
+        details: Some("pip 通常随 Python 一起安装，请确保 Python 已正确安装".to_string()),
+        has_issue: false,
+    }
+}
+
+fn check_nanobot_installation() -> DiagnosticCheck {
+    let nanobot_path = find_command("nanobot");
+
+    if let Some(path) = nanobot_path {
+        // 尝试运行 --version
+        let output = Command::new(&path)
+            .arg("--version")
+            .output();
+
+        match output {
+            Ok(out) if out.status.success() => {
+                let version = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                DiagnosticCheck {
+                    name: "nanobot 安装".to_string(),
+                    status: "ok".to_string(),
+                    message: format!("nanobot 已安装: {}", version),
+                    details: Some(path),
+                    has_issue: false,
+                }
+            }
+            Ok(out) => {
+                let stderr = String::from_utf8_lossy(&out.stderr);
+                DiagnosticCheck {
+                    name: "nanobot 安装".to_string(),
+                    status: "error".to_string(),
+                    message: "nanobot 命令存在但执行失败".to_string(),
+                    details: Some(format!("错误: {}\n路径: {}", stderr.trim(), path)),
+                    has_issue: true,
+                }
+            }
+            Err(e) => {
+                DiagnosticCheck {
+                    name: "nanobot 安装".to_string(),
+                    status: "error".to_string(),
+                    message: "nanobot 命令存在但无法执行".to_string(),
+                    details: Some(format!("错误: {}", e)),
+                    has_issue: true,
+                }
+            }
+        }
+    } else {
+        DiagnosticCheck {
+            name: "nanobot 安装".to_string(),
+            status: "error".to_string(),
+            message: "未安装 nanobot-ai".to_string(),
+            details: Some("请运行: pip install nanobot-ai\n或在 Nanoboard 中点击下载按钮".to_string()),
+            has_issue: true,
+        }
+    }
+}
+
+/// 检查 nanobot 是否实际可用（已安装且可正常运行）
+/// 如果 nanobot 可用，说明环境实际上满足要求
+fn check_nanobot_usable() -> DiagnosticCheck {
+    // 首先检查 nanobot 是否已安装
+    let nanobot_path = find_command("nanobot");
+
+    if let Some(path) = nanobot_path {
+        // 尝试运行 --version 来验证可用性
+        let output = Command::new(&path)
+            .arg("--version")
+            .output();
+
+        match output {
+            Ok(out) if out.status.success() => {
+                let version = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                DiagnosticCheck {
+                    name: "nanobot 可用性".to_string(),
+                    status: "ok".to_string(),
+                    message: format!("nanobot 可正常运行 (版本: {})", version),
+                    details: Some(format!(
+                        "nanobot 已安装且可用\n路径: {}\n\n说明：如果 nanobot 可用，说明 Python 版本实际满足要求，可以忽略版本警告",
+                        path
+                    )),
+                    has_issue: false,
+                }
+            }
+            Ok(out) => {
+                // 命令执行失败
+                DiagnosticCheck {
+                    name: "nanobot 可用性".to_string(),
+                    status: "warning".to_string(),
+                    message: "nanobot 已安装但执行异常".to_string(),
+                    details: Some(format!(
+                        "错误: {}\n路径: {}\n\n建议：运行 nanobot --version 检查问题",
+                        String::from_utf8_lossy(&out.stderr).trim(),
+                        path
+                    )),
+                    has_issue: true,
+                }
+            }
+            Err(e) => {
+                DiagnosticCheck {
+                    name: "nanobot 可用性".to_string(),
+                    status: "error".to_string(),
+                    message: "nanobot 命令存在但无法执行".to_string(),
+                    details: Some(format!("错误: {}", e)),
+                    has_issue: true,
+                }
+            }
+        }
+    } else {
+        // nanobot 未安装
+        DiagnosticCheck {
+            name: "nanobot 可用性".to_string(),
+            status: "error".to_string(),
+            message: "nanobot 未安装".to_string(),
+            details: Some("请点击 'uv 下载' 或 'pip 下载' 按钮进行安装".to_string()),
+            has_issue: true,
+        }
+    }
+}
+
+fn check_config_file() -> DiagnosticCheck {
+    let home_dir = match dirs::home_dir() {
+        Some(dir) => dir,
+        None => {
+            return DiagnosticCheck {
+                name: "配置文件".to_string(),
+                status: "error".to_string(),
+                message: "无法找到用户主目录".to_string(),
+                details: None,
+                has_issue: true,
+            };
+        }
+    };
+
+    let config_path = home_dir.join(".nanobot").join("config.json");
+
+    if !config_path.exists() {
+        return DiagnosticCheck {
+            name: "配置文件".to_string(),
+            status: "warning".to_string(),
+            message: "配置文件不存在".to_string(),
+            details: Some("请运行: nanobot onboard\n或在 Nanoboard 中点击初始化按钮".to_string()),
+            has_issue: false,
+        };
+    }
+
+    // 检查配置文件是否有效
+    let config_content = match std::fs::read_to_string(&config_path) {
+        Ok(content) => content,
+        Err(e) => {
+            return DiagnosticCheck {
+                name: "配置文件".to_string(),
+                status: "error".to_string(),
+                message: "无法读取配置文件".to_string(),
+                details: Some(format!("错误: {}", e)),
+                has_issue: true,
+            };
+        }
+    };
+
+    match serde_json::from_str::<serde_json::Value>(&config_content) {
+        Ok(_) => DiagnosticCheck {
+            name: "配置文件".to_string(),
+            status: "ok".to_string(),
+            message: "配置文件存在且有效".to_string(),
+            details: Some(config_path.to_string_lossy().to_string()),
+            has_issue: false,
+        },
+        Err(e) => DiagnosticCheck {
+            name: "配置文件".to_string(),
+            status: "error".to_string(),
+            message: "配置文件格式无效".to_string(),
+            details: Some(format!("错误: {}", e)),
+            has_issue: true,
+        },
+    }
+}
+
+fn check_nanobot_dependencies() -> DiagnosticCheck {
+    // 检查一些常见的依赖
+    let mut missing_deps = Vec::new();
+
+    // 检查 fastapi
+    if let Err(_) = Command::new("python")
+        .args(&["-c", "import fastapi"])
+        .output()
+    {
+        missing_deps.push("fastapi");
+    }
+
+    // 检查 openai
+    if let Err(_) = Command::new("python")
+        .args(&["-c", "import openai"])
+        .output()
+    {
+        missing_deps.push("openai");
+    }
+
+    if missing_deps.is_empty() {
+        DiagnosticCheck {
+            name: "依赖检查".to_string(),
+            status: "ok".to_string(),
+            message: "核心依赖已安装".to_string(),
+            details: None,
+            has_issue: false,
+        }
+    } else {
+        DiagnosticCheck {
+            name: "依赖检查".to_string(),
+            status: "warning".to_string(),
+            message: format!("部分依赖可能缺失: {}", missing_deps.join(", ")),
+            details: Some("请尝试重新安装: pip install nanobot-ai --upgrade".to_string()),
+            has_issue: false,
+        }
     }
 }

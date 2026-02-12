@@ -48,3 +48,5 @@ lerna-debug.log*
 
 .claude/
 docs/
+DEVLOG.md
+BUILD_GUIDE.md

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { processApi, configApi, loggerApi, networkApi } from "../lib/tauri";
 import NetworkMonitor from "../components/NetworkMonitor";
+import { useToast } from "../contexts/ToastContext";
 import {
   Activity,
   CheckCircle,
@@ -15,6 +16,10 @@ import {
   Bot,
   Server,
   TrendingUp,
+  AlertCircle,
+  XCircle,
+  Stethoscope,
+  Download,
 } from "lucide-react";
 
 interface Status {
@@ -84,6 +89,7 @@ interface Config {
 }
 
 export default function Dashboard() {
+  const toast = useToast();
   const [status, setStatus] = useState<Status>({ running: false });
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [nanobotVersion, setNanobotVersion] = useState<NanobotVersion | null>(null);
@@ -91,6 +97,11 @@ export default function Dashboard() {
   const [config, setConfig] = useState<Config | null>(null);
   const [logStatistics, setLogStatistics] = useState<LogStatistics | null>(null);
   const [networkData, setNetworkData] = useState<NetworkData[]>([]);
+  const [diagnosing, setDiagnosing] = useState(false);
+  const [diagnosisResult, setDiagnosisResult] = useState<any>(null);
+  const [showDiagnosis, setShowDiagnosis] = useState(false);
+  const [installingWithUv, setInstallingWithUv] = useState(false);
+  const [installingWithPip, setInstallingWithPip] = useState(false);
 
   // 刷新所有状态的函数
   async function refreshAll() {
@@ -222,6 +233,98 @@ export default function Dashboard() {
       });
     } catch (error) {
       console.error("获取网络统计失败:", error);
+    }
+  }
+
+  // 运行环境诊断
+  async function runDiagnosis() {
+    setDiagnosing(true);
+    try {
+      const result = await processApi.diagnose();
+      setDiagnosisResult(result);
+      setShowDiagnosis(true);
+    } catch (error) {
+      console.error("诊断失败:", error);
+      setDiagnosisResult({
+        overall: "error",
+        checks: [{
+          name: "诊断工具",
+          status: "error",
+          message: "诊断失败: " + (error as Error).message,
+          details: null,
+        }]
+      });
+      setShowDiagnosis(true);
+    } finally {
+      setDiagnosing(false);
+    }
+  }
+
+  // 使用 uv 下载并初始化 nanobot
+  async function downloadWithUvAndInit() {
+    setInstallingWithUv(true);
+    try {
+      // 1. 使用 uv 下载安装
+      toast.showInfo("正在使用 uv 下载安装 nanobot-ai...");
+      const downloadResult = await processApi.downloadWithUv();
+      if (downloadResult.status !== "success") {
+        toast.showError("安装失败: " + downloadResult.message);
+        return;
+      }
+      toast.showSuccess("Nanobot 安装成功（使用 uv）！");
+
+      // 2. 初始化
+      toast.showInfo("正在初始化 nanobot...");
+      const onboardResult = await processApi.onboard();
+      if (onboardResult.status === "success") {
+        toast.showSuccess("Nanobot 初始化成功！");
+      } else {
+        toast.showError("初始化失败: " + onboardResult.message);
+      }
+
+      // 3. 刷新状态
+      await loadNanobotVersion();
+      await loadNanobotPath();
+      await loadConfig();
+    } catch (error) {
+      console.error("操作失败:", error);
+      toast.showError("操作失败: " + (error as Error).message);
+    } finally {
+      setInstallingWithUv(false);
+    }
+  }
+
+  // 使用 pip 下载并初始化 nanobot
+  async function downloadWithPipAndInit() {
+    setInstallingWithPip(true);
+    try {
+      // 1. 使用 pip 下载安装
+      toast.showInfo("正在使用 pip 下载安装 nanobot-ai...");
+      const downloadResult = await processApi.download();
+      if (downloadResult.status !== "success") {
+        toast.showError("安装失败: " + downloadResult.message);
+        return;
+      }
+      toast.showSuccess("Nanobot 安装成功（使用 pip）！");
+
+      // 2. 初始化
+      toast.showInfo("正在初始化 nanobot...");
+      const onboardResult = await processApi.onboard();
+      if (onboardResult.status === "success") {
+        toast.showSuccess("Nanobot 初始化成功！");
+      } else {
+        toast.showError("初始化失败: " + onboardResult.message);
+      }
+
+      // 3. 刷新状态
+      await loadNanobotVersion();
+      await loadNanobotPath();
+      await loadConfig();
+    } catch (error) {
+      console.error("操作失败:", error);
+      toast.showError("操作失败: " + (error as Error).message);
+    } finally {
+      setInstallingWithPip(false);
     }
   }
 
@@ -562,10 +665,95 @@ export default function Dashboard() {
 
         {/* 系统信息 */}
         <div className="p-6 bg-white rounded-lg border border-gray-200">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900">
-            <Zap className="w-5 h-5 text-indigo-600" />
-            系统信息
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2 text-gray-900">
+              <Zap className="w-5 h-5 text-indigo-600" />
+              系统信息
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {/* uv 下载按钮 */}
+              <button
+                onClick={downloadWithUvAndInit}
+                disabled={installingWithUv || installingWithPip || diagnosing}
+                className="flex items-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              >
+                <Download className="w-4 h-4" />
+                {installingWithUv ? "安装中..." : "uv 下载"}
+              </button>
+
+              {/* pip 下载按钮 */}
+              <button
+                onClick={downloadWithPipAndInit}
+                disabled={installingWithUv || installingWithPip || diagnosing}
+                className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              >
+                <Download className="w-4 h-4" />
+                {installingWithPip ? "安装中..." : "pip 下载"}
+              </button>
+
+              {/* 环境诊断按钮 */}
+              <button
+                onClick={runDiagnosis}
+                disabled={installingWithUv || installingWithPip || diagnosing}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              >
+                <Stethoscope className="w-4 h-4" />
+                {diagnosing ? "诊断中..." : "环境诊断"}
+              </button>
+            </div>
+          </div>
+
+          {/* 诊断结果 */}
+          {showDiagnosis && diagnosisResult && (
+            <div className="mb-6 p-5 rounded-lg border bg-gray-50">
+              <div className="flex items-center gap-2 mb-4">
+                {diagnosisResult.overall === "passed" ? (
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                ) : (
+                  <XCircle className="w-5 h-5 text-red-600" />
+                )}
+                <h3 className="font-semibold text-gray-900">
+                  诊断结果: {diagnosisResult.overall === "passed" ? "通过" : "发现问题"}
+                </h3>
+              </div>
+              <div className="space-y-3">
+                {diagnosisResult.checks.map((check: any, idx: number) => (
+                  <div key={idx} className="flex items-start gap-3 p-3 rounded bg-white border border-gray-200">
+                    <div className="mt-0.5">
+                      {check.status === "ok" && <CheckCircle className="w-4 h-4 text-green-600" />}
+                      {check.status === "warning" && <AlertCircle className="w-4 h-4 text-amber-600" />}
+                      {check.status === "error" && <XCircle className="w-4 h-4 text-red-600" />}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-gray-900">{check.name}</p>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          check.status === "ok" ? "bg-green-100 text-green-700" :
+                          check.status === "warning" ? "bg-amber-100 text-amber-700" :
+                          "bg-red-100 text-red-700"
+                        }`}>
+                          {check.status === "ok" ? "正常" : check.status === "warning" ? "警告" : "错误"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600 mt-1">{check.message}</p>
+                      {check.details && (
+                        <p className="text-xs text-gray-500 mt-1 whitespace-pre-wrap font-mono bg-gray-50 p-2 rounded">
+                          {check.details}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => setShowDiagnosis(false)}
+                className="mt-4 text-sm text-gray-600 hover:text-gray-900"
+              >
+                关闭诊断结果
+              </button>
+            </div>
+          )}
+
           <div className="space-y-3">
             {[
               { icon: FileText, label: "配置文件位置", value: "~/.nanobot/config.json" },

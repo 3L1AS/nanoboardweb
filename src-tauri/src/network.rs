@@ -73,27 +73,35 @@ fn get_network_stats_impl() -> (u64, u64) {
 #[cfg(target_os = "windows")]
 fn get_network_stats_impl() -> (u64, u64) {
     use std::process::Command;
-    // Windows 使用 Get-NetTCPStatistics 或其他方法
-    // 尝试使用 PowerShell 获取网络统计
+    use std::os::windows::process::CommandExt;
+
+    const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+    // Windows 使用 Get-NetAdapterStatistics 获取网络适配器统计
+    // 获取主要网络接口的接收和发送字节数
     if let Ok(output) = Command::new("powershell")
         .args(&[
+            "-WindowStyle",
+            "Hidden",
+            "-ExecutionPolicy",
+            "Bypass",
             "-Command",
-            "Get-NetTCPStatistics | Select-Object -Property BytesReceived,BytesSent",
+            "Get-NetAdapterStatistics | Select-Object -First 1 -Property ReceivedBytes,SentBytes | ConvertTo-Json",
         ])
+        .creation_flags(CREATE_NO_WINDOW)
         .output()
     {
         let content = String::from_utf8_lossy(&output.stdout);
-        // PowerShell 输出可能包含多行，取最后有效值
-        for line in content.lines() {
-            let line = line.trim();
-            if !line.is_empty() {
-                if let Ok(bytes) = line.parse::<u64>() {
-                    // 返回字节值（注意：Windows 返回的是累计值）
-                    return (bytes, bytes);
-                }
+        // PowerShell 输出 JSON 格式
+        if let Ok(json) = content.trim().parse::<serde_json::Value>() {
+            if let Some(obj) = json.as_object() {
+                let received = obj.get("ReceivedBytes").and_then(|v| v.as_u64()).unwrap_or(0);
+                let sent = obj.get("SentBytes").and_then(|v| v.as_u64()).unwrap_or(0);
+                return (received, sent);
             }
         }
     }
+    // 失败时返回 (0, 0)，避免错误传播
     (0, 0)
 }
 

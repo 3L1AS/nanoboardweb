@@ -23,11 +23,13 @@ export const processApi = {
   stop: () => invoke<any>("stop_nanobot"),
   getStatus: () => invoke<any>("get_status"),
   download: () => invoke<any>("download_nanobot"),
+  downloadWithUv: () => invoke<any>("download_nanobot_with_uv"),
   onboard: () => invoke<any>("onboard_nanobot"),
   getSystemInfo: () => invoke<any>("get_system_info"),
   getVersion: () => invoke<any>("get_nanobot_version"),
   getNanobotPath: () => invoke<any>("get_nanobot_path"),
   checkConfig: () => invoke<any>("check_nanobot_config"),
+  diagnose: () => invoke<any>("diagnose_nanobot"),
 };
 
 // Logger API

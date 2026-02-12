@@ -41,11 +41,13 @@ async fn main() {
             process::stop_nanobot,
             process::get_status,
             process::download_nanobot,
+            process::download_nanobot_with_uv,
             process::onboard_nanobot,
             process::get_system_info,
             process::get_nanobot_version,
             process::get_nanobot_path,
             process::check_nanobot_config,
+            process::diagnose_nanobot,
             // Logger commands
             logger::get_logs,
             logger::get_log_statistics,
