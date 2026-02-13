@@ -29,82 +29,24 @@ import EmptyState from "../components/EmptyState";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { DEFAULT_CONFIG } from "../lib/defaultConfig";
 
-interface Provider {
-  id?: string;
-  name: string;
-  apiKey?: string;
-  apiBase?: string;
-  default_model?: string;  // 仅用于 UI 辅助，不保存到配置
-  models?: string[];       // 仅用于 UI 辅助，不保存到配置
-}
-
-// 每个 Provider 独立的 Agent 配置（存储在 localStorage）
-interface ProviderAgentConfig {
-  model?: string;
-  max_tokens?: number;
-  max_tool_iterations?: number;
-  temperature?: number;
-  workspace?: string;
-}
-
-interface AgentDefaults {
-  model?: string;
-  max_tokens?: number;
-  max_tool_iterations?: number;
-  temperature?: number;
-  workspace?: string;
-}
-
-interface Channel {
-  enabled?: boolean;
-  config?: Record<string, any>;
-  // Telegram & Discord
-  token?: string;
-  allowFrom?: string[];
-  // Feishu
-  appId?: string;
-  appSecret?: string;
-  encryptKey?: string;
-  verificationToken?: string;
-  // DingTalk
-  clientId?: string;
-  clientSecret?: string;
-  // Slack
-  botToken?: string;
-  appToken?: string;
-  groupPolicy?: string;
-  dm?: { enabled?: boolean };
-  // QQ
-  secret?: string;
-  // Email
-  consentGranted?: boolean;
-  imapHost?: string;
-  imapPort?: number;
-  imapUsername?: string;
-  imapPassword?: string;
-  smtpHost?: string;
-  smtpPort?: number;
-  smtpUsername?: string;
-  smtpPassword?: string;
-  fromAddress?: string;
-  autoReplyEnabled?: boolean;
-}
-
-interface Config {
-  providers?: Record<string, Provider>;
-  agents?: {
-    defaults?: AgentDefaults;
-  };
-  channels?: Record<string, Channel>;
-}
-
-interface ConfigTemplate {
-  id: string;
-  name: string;
-  description: string;
-  config: Config;
-  createdAt: number;
-}
+// 导入模块化的类型和数据
+import type {
+  Config,
+  ConfigTemplate,
+  ConfigHistoryVersion,
+  ProviderAgentConfig,
+  ProviderInfo,
+  ChannelInfo,
+  Provider,
+} from "@/config/types";
+import { AVAILABLE_PROVIDERS } from "@/config/providers";
+import { CHANNELS_CONFIG } from "@/config/channels";
+import { formatTimestamp, formatSize } from "@/utils/format";
+// TODO: 下一步重构使用这些组件
+// import ProviderEditModal from "@/components/config/ProviderEditModal";
+// import ChannelEditModal from "@/components/config/ChannelEditModal";
+// import HistoryPanel from "@/components/config/HistoryPanel";
+// import CodeEditorView from "@/components/config/CodeEditorView";
 
 const TEMPLATES_STORAGE_KEY = "nanobot_config_templates";
 const PROVIDER_AGENT_CONFIGS_KEY = "nanoboard_provider_agent_configs";
@@ -126,230 +68,6 @@ const ProviderIcon = ({ name, className }: { name: string; className?: string })
   return <IconComponent className={className} />;
 };
 
-// 预定义的常用 AI Provider 列表（根据 nanobot 官方文档）
-const AVAILABLE_PROVIDERS = [
-  {
-    id: "openrouter",
-    nameKey: "providers.openrouter",
-    icon: "Network",
-    colorClass: "bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400",
-    apiBase: "https://openrouter.ai/api/v1",
-    apiUrl: "https://openrouter.ai",
-    defaultModel: "anthropic/claude-sonnet-4-5",
-    models: ["anthropic/claude-sonnet-4-5", "openai/gpt-4o", "google/gemini-pro-1.5"],
-  },
-  {
-    id: "anthropic",
-    nameKey: "providers.anthropic",
-    icon: "Bot",
-    colorClass: "bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400",
-    apiBase: "https://api.anthropic.com",
-    apiUrl: "https://console.anthropic.com",
-    defaultModel: "claude-sonnet-4-5",
-    models: ["claude-opus-4-5", "claude-sonnet-4-5", "claude-haiku-4-5"],
-  },
-  {
-    id: "openai",
-    nameKey: "providers.openai",
-    icon: "Brain",
-    colorClass: "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400",
-    apiBase: "https://api.openai.com/v1",
-    apiUrl: "https://platform.openai.com",
-    defaultModel: "gpt-4o",
-    models: ["gpt-4o", "gpt-4-turbo", "gpt-4o-mini"],
-  },
-  {
-    id: "deepseek",
-    nameKey: "providers.deepseek",
-    icon: "Search",
-    colorClass: "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
-    apiBase: "https://api.deepseek.com",
-    apiUrl: "https://platform.deepseek.com",
-    defaultModel: "deepseek-chat",
-    models: ["deepseek-chat", "deepseek-reasoner", "deepseek-coder"],
-  },
-  {
-    id: "groq",
-    nameKey: "providers.groq",
-    icon: "Zap",
-    colorClass: "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400",
-    apiBase: "https://api.groq.com/openai/v1",
-    apiUrl: "https://console.groq.com",
-    defaultModel: "llama-3.3-70b-versatile",
-    models: ["llama-3.3-70b-versatile", "mixtral-8x7b-32768", "gemma2-9b-it"],
-  },
-  {
-    id: "gemini",
-    nameKey: "providers.gemini",
-    icon: "Target",
-    colorClass: "bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400",
-    apiBase: "https://generativelanguage.googleapis.com",
-    apiUrl: "https://aistudio.google.com",
-    defaultModel: "gemini-2.0-flash-exp",
-    models: ["gemini-2.0-flash-exp", "gemini-pro", "gemini-1.5-pro"],
-  },
-  {
-    id: "aihubmix",
-    nameKey: "providers.aihubmix",
-    icon: "Server",
-    colorClass: "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400",
-    apiBase: "https://aihubmix.com",
-    apiUrl: "https://aihubmix.com",
-    defaultModel: "anthropic/claude-sonnet-4-5",
-    models: ["anthropic/claude-sonnet-4-5", "openai/gpt-4o"],
-  },
-  {
-    id: "dashscope",
-    nameKey: "providers.dashscope",
-    icon: "Cpu",
-    colorClass: "bg-cyan-50 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400",
-    apiBase: "https://dashscope.console.aliyun.com",
-    apiUrl: "https://dashscope.console.aliyun.com",
-    defaultModel: "qwen-turbo",
-    models: ["qwen-turbo", "qwen-plus", "qwen-max"],
-  },
-  {
-    id: "moonshot",
-    nameKey: "providers.moonshot",
-    icon: "Target",
-    colorClass: "bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400",
-    apiBase: "https://api.moonshot.cn",
-    apiUrl: "https://platform.moonshot.cn",
-    defaultModel: "moonshot-v1-8k",
-    models: ["moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k"],
-  },
-  {
-    id: "zhipu",
-    nameKey: "providers.zhipu",
-    icon: "Search",
-    colorClass: "bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400",
-    apiBase: "https://open.bigmodel.cn/api/paas/v4",
-    apiUrl: "https://open.bigmodel.cn",
-    defaultModel: "glm-4-flash",
-    models: ["glm-4-flash", "glm-4-plus", "glm-4-air"],
-  },
-  {
-    id: "vllm",
-    nameKey: "providers.vllm",
-    icon: "Server",
-    colorClass: "bg-gray-50 dark:bg-gray-900/30 text-gray-600 dark:text-gray-400",
-    apiBase: "http://localhost:8000/v1",
-    apiUrl: "",
-    defaultModel: "",
-    models: [],
-  },
-];
-
-// 消息渠道配置信息
-interface ChannelField {
-  name: string;
-  labelKey: string;  // 使用翻译 key 而不是硬编码标签
-  type: "text" | "password" | "number" | "select";
-  placeholderKey?: string;  // 使用翻译 key 而不是硬编码占位符
-  default?: any;
-  options?: string[];
-}
-
-const CHANNELS_CONFIG: Array<{
-  key: string;
-  nameKey: string;  // 使用翻译 key
-  colorClass: string;
-  fields: ChannelField[];
-}> = [
-  {
-    key: "telegram",
-    nameKey: "channels.telegram",
-    colorClass: "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
-    fields: [
-      { name: "token", labelKey: "config.apiKey", type: "password", placeholderKey: "channels.telegram.tokenPlaceholder" },
-      { name: "allowFrom", labelKey: "config.channels.telegram.allowFromPlaceholder", type: "text", placeholderKey: "channels.telegram.allowFromPlaceholder" },
-    ],
-  },
-  {
-    key: "discord",
-    nameKey: "channels.discord",
-    colorClass: "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400",
-    fields: [
-      { name: "token", labelKey: "config.apiKey", type: "password", placeholderKey: "channels.discord.tokenPlaceholder" },
-      { name: "allowFrom", labelKey: "config.channels.discord.allowFromPlaceholder", type: "text", placeholderKey: "channels.discord.allowFromPlaceholder" },
-    ],
-  },
-  {
-    key: "whatsapp",
-    nameKey: "channels.whatsapp",
-    colorClass: "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400",
-    fields: [
-      { name: "allowFrom", labelKey: "config.channels.whatsapp.allowFromPlaceholder", type: "text", placeholderKey: "channels.whatsapp.allowFromPlaceholder" },
-    ],
-  },
-  {
-    key: "feishu",
-    nameKey: "channels.feishu",
-    colorClass: "bg-cyan-50 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400",
-    fields: [
-      { name: "appId", labelKey: "config.apiKey", type: "text", placeholderKey: "channels.feishu.appIdPlaceholder" },
-      { name: "appSecret", labelKey: "config.apiKey", type: "password", placeholderKey: "channels.feishu.appSecretPlaceholder" },
-      { name: "encryptKey", labelKey: "channels.feishu.encryptKeyLabel", type: "text", placeholderKey: "channels.feishu.encryptKeyPlaceholder" },
-      { name: "verificationToken", labelKey: "channels.feishu.verificationTokenLabel", type: "text", placeholderKey: "channels.feishu.verificationTokenPlaceholder" },
-      { name: "allowFrom", labelKey: "config.channels.feishu.allowFromPlaceholder", type: "text", placeholderKey: "channels.feishu.allowFromPlaceholder" },
-    ],
-  },
-  {
-    key: "dingtalk",
-    nameKey: "channels.dingtalk",
-    colorClass: "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400",
-    fields: [
-      { name: "clientId", labelKey: "channels.dingtalk.clientIdLabel", type: "text", placeholderKey: "channels.dingtalk.clientIdPlaceholder" },
-      { name: "clientSecret", labelKey: "channels.dingtalk.clientSecretLabel", type: "password", placeholderKey: "channels.dingtalk.clientSecretPlaceholder" },
-      { name: "allowFrom", labelKey: "config.channels.dingtalk.allowFromPlaceholder", type: "text", placeholderKey: "channels.dingtalk.allowFromPlaceholder" },
-    ],
-  },
-  {
-    key: "slack",
-    nameKey: "channels.slack",
-    colorClass: "bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400",
-    fields: [
-      { name: "botToken", labelKey: "config.apiKey", type: "password", placeholderKey: "channels.slack.botTokenPlaceholder" },
-      { name: "appToken", labelKey: "config.apiKey", type: "password", placeholderKey: "channels.slack.appTokenPlaceholder" },
-      { name: "groupPolicy", labelKey: "channels.slack.groupPolicyLabel", type: "select", options: ["mention", "open", "allowlist"], default: "mention" },
-      { name: "allowFrom", labelKey: "channels.slack.allowFromLabel", type: "text", placeholderKey: "channels.slack.allowFromPlaceholder" },
-    ],
-  },
-  {
-    key: "qq",
-    nameKey: "channels.qq",
-    colorClass: "bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400",
-    fields: [
-      { name: "appId", labelKey: "config.apiKey", type: "text", placeholderKey: "channels.qq.appIdPlaceholder" },
-      { name: "secret", labelKey: "channels.qq.secretLabel", type: "password", placeholderKey: "channels.qq.secretPlaceholder" },
-      { name: "allowFrom", labelKey: "config.channels.qq.allowFromPlaceholder", type: "text", placeholderKey: "channels.qq.allowFromPlaceholder" },
-    ],
-  },
-  {
-    key: "email",
-    nameKey: "channels.email",
-    colorClass: "bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400",
-    fields: [
-      { name: "imapHost", labelKey: "channels.email.imapServerLabel", type: "text", placeholderKey: "channels.email.imapServerPlaceholder" },
-      { name: "imapPort", labelKey: "channels.email.imapPortLabel", type: "number", default: 993 },
-      { name: "imapUsername", labelKey: "channels.email.imapUsernameLabel", type: "text", placeholderKey: "channels.email.imapUsernamePlaceholder" },
-      { name: "imapPassword", labelKey: "channels.email.imapPasswordLabel", type: "password", placeholderKey: "channels.email.imapPasswordPlaceholder" },
-      { name: "smtpHost", labelKey: "channels.email.smtpServerLabel", type: "text", placeholderKey: "channels.email.smtpServerPlaceholder" },
-      { name: "smtpPort", labelKey: "channels.email.smtpPortLabel", type: "number", default: 587 },
-      { name: "smtpUsername", labelKey: "channels.email.smtpUsernameLabel", type: "text", placeholderKey: "channels.email.smtpUsernamePlaceholder" },
-      { name: "smtpPassword", labelKey: "channels.email.smtpPasswordLabel", type: "password", placeholderKey: "channels.email.smtpPasswordPlaceholder" },
-      { name: "fromAddress", labelKey: "channels.email.fromAddressLabel", type: "text", placeholderKey: "channels.email.fromAddressPlaceholder" },
-      { name: "allowFrom", labelKey: "channels.email.allowFromLabel", type: "text", placeholderKey: "channels.email.allowFromPlaceholder" },
-    ],
-  },
-  {
-    key: "terminal",
-    nameKey: "channels.terminal",
-    colorClass: "bg-gray-50 dark:bg-gray-900/30 text-gray-600 dark:text-gray-400",
-    fields: [],
-  },
-];
-
 export default function ConfigEditor() {
   const { t, i18n } = useTranslation();
   const [config, setConfig] = useState<Config>({});
@@ -360,7 +78,7 @@ export default function ConfigEditor() {
   const [editingProvider, setEditingProvider] = useState<{
     isOpen: boolean;
     providerId: string;
-    providerInfo: typeof AVAILABLE_PROVIDERS[0] | null;
+    providerInfo: ProviderInfo | null;
     activeTab: "api" | "agent";
   }>({ isOpen: false, providerId: "", providerInfo: null, activeTab: "api" });
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(() => {
@@ -370,7 +88,7 @@ export default function ConfigEditor() {
 
 
   const [showHistory, setShowHistory] = useState(false);
-  const [historyVersions, setHistoryVersions] = useState<any[]>([]);
+  const [historyVersions, setHistoryVersions] = useState<ConfigHistoryVersion[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
@@ -390,13 +108,13 @@ export default function ConfigEditor() {
   const [editingChannel, setEditingChannel] = useState<{
     isOpen: boolean;
     channelKey: string;
-    channelInfo: typeof CHANNELS_CONFIG[0] | null;
+    channelInfo: ChannelInfo | null;
   }>({ isOpen: false, channelKey: "", channelInfo: null });
   const toast = useToast();
 
   // 代码编辑器模式状态
   const [viewMode, setViewMode] = useState<"visual" | "code">("visual");
-  const [originalConfig, setOriginalConfig] = useState<any>({});
+  const [originalConfig, setOriginalConfig] = useState<Config>({});
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
   const [savingCode, setSavingCode] = useState(false);
@@ -745,21 +463,11 @@ export default function ConfigEditor() {
     }
   }
 
-  function formatTimestamp(timestamp: number): string {
-    return new Date(timestamp * 1000).toLocaleString(i18n.language === "en" ? "en-US" : "zh-CN");
-  }
-
-  function formatSize(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  }
-
-  function restoreVersion(version: any) {
+  function restoreVersion(version: ConfigHistoryVersion) {
     setConfirmDialog({
       isOpen: true,
       title: t("config.confirmRestore"),
-      message: t("config.confirmRestoreMsg", { time: formatTimestamp(version.timestamp) }),
+      message: t("config.confirmRestoreMsg", { time: formatTimestamp(version.timestamp, i18n.language) }),
       onConfirm: async () => {
         try {
           await configApi.restoreVersion(version.filename);
