@@ -78,23 +78,23 @@ export default function NetworkMonitor({ data = [] }: NetworkMonitorProps) {
       {/* 标题和当前值 */}
       <div className="flex flex-col gap-2 mb-3">
         <div className="flex items-center gap-1.5">
-          <TrendingUp className="w-3.5 h-3.5 text-cyan-600" />
+          <TrendingUp className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
           <div className="text-xs">
-            <span className="text-gray-500">{t("dashboard.upload")}: </span>
-            <span className="font-medium text-gray-700">{formatSpeed(currentUpload)}</span>
+            <span className="text-gray-500 dark:text-dark-text-muted">{t("dashboard.upload")}: </span>
+            <span className="font-medium text-gray-700 dark:text-dark-text-secondary">{formatSpeed(currentUpload)}</span>
           </div>
         </div>
         <div className="flex items-center gap-1.5">
-          <TrendingDown className="w-3.5 h-3.5 text-blue-600" />
+          <TrendingDown className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
           <div className="text-xs">
-            <span className="text-gray-500">{t("dashboard.download")}: </span>
-            <span className="font-medium text-gray-700">{formatSpeed(currentDownload)}</span>
+            <span className="text-gray-500 dark:text-dark-text-muted">{t("dashboard.download")}: </span>
+            <span className="font-medium text-gray-700 dark:text-dark-text-secondary">{formatSpeed(currentDownload)}</span>
           </div>
         </div>
       </div>
 
       {/* 折线图 */}
-      <div className="flex-1 bg-gray-50 rounded-lg border border-gray-200 relative overflow-hidden">
+      <div className="flex-1 bg-gray-50 dark:bg-dark-bg-sidebar rounded-lg border border-gray-200 dark:border-dark-border-subtle relative overflow-hidden transition-colors duration-200">
         <svg
           ref={svgRef}
           viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
@@ -109,9 +109,10 @@ export default function NetworkMonitor({ data = [] }: NetworkMonitorProps) {
               y1={dimensions.height * (1 - ratio)}
               x2={dimensions.width}
               y2={dimensions.height * (1 - ratio)}
-              stroke="#e5e7eb"
+              stroke="currentColor"
               strokeWidth="1"
               strokeDasharray="4 4"
+              className="text-gray-300 dark:text-dark-border-default opacity-30 dark:opacity-50"
             />
           ))}
 

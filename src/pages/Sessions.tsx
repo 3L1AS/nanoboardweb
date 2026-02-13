@@ -302,12 +302,12 @@ export default function Sessions() {
   });
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-white">
+    <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-dark-bg-base transition-colors duration-200">
       {/* 页面头部 */}
-      <div className="border-b border-gray-200 bg-white flex-shrink-0">
+      <div className="border-b border-gray-200 dark:border-dark-border-subtle bg-white dark:bg-dark-bg-card flex-shrink-0 transition-colors duration-200">
         {/* 标题栏 */}
         <div className="px-6 py-4">
-          <h1 className="text-xl font-semibold text-gray-900">{t("sessions.title")}</h1>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-dark-text-primary">{t("sessions.title")}</h1>
         </div>
 
         {/* 面包屑导航和搜索栏 */}
@@ -319,8 +319,8 @@ export default function Sessions() {
                 onClick={() => loadDirectory("")}
                 className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${
                   !currentPath || currentPath === "/"
-                    ? "text-gray-900 font-medium"
-                    : "text-gray-600 hover:bg-gray-200"
+                    ? "text-gray-900 dark:text-dark-text-primary font-medium"
+                    : "text-gray-600 dark:text-dark-text-secondary hover:bg-gray-200 dark:hover:bg-dark-bg-hover"
                 }`}
               >
                 <Home className="w-4 h-4" />
@@ -328,13 +328,13 @@ export default function Sessions() {
               </button>
               {getBreadcrumbs().map((crumb, index) => (
                 <div key={crumb.path} className="flex items-center gap-1">
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                  <ChevronRight className="w-4 h-4 text-gray-400 dark:text-dark-text-muted" />
                   <button
                     onClick={() => loadDirectory(crumb.path)}
                     className={`px-2 py-1 rounded transition-colors ${
                       index === getBreadcrumbs().length - 1
-                        ? "text-gray-900 font-medium"
-                        : "text-gray-600 hover:bg-gray-200"
+                        ? "text-gray-900 dark:text-dark-text-primary font-medium"
+                        : "text-gray-600 dark:text-dark-text-secondary hover:bg-gray-200 dark:hover:bg-dark-bg-hover"
                     }`}
                   >
                     {crumb.name}
@@ -346,19 +346,19 @@ export default function Sessions() {
             {/* 搜索框和上传按钮 */}
             <div className="relative w-64 flex items-center gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-dark-text-muted" />
                 <input
                   type="text"
                   placeholder={t("sessions.searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white dark:bg-dark-bg-sidebar text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted transition-colors duration-200"
                 />
               </div>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingFile}
-                className="p-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                className="p-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-dark-bg-active disabled:cursor-not-allowed text-white rounded-lg transition-colors"
                 title={t("sessions.uploadFile")}
               >
                 <Upload className={`w-4 h-4 ${uploadingFile ? 'animate-pulse' : ''}`} />
@@ -380,7 +380,7 @@ export default function Sessions() {
         {/* 文件列表和详情区域 */}
         <div className="flex-1 min-h-0 flex overflow-hidden">
           {/* 左侧文件列表 */}
-          <div className="w-96 border-r border-gray-200 flex flex-col bg-white overflow-hidden">
+          <div className="w-96 border-r border-gray-200 dark:border-dark-border-subtle flex flex-col bg-white dark:bg-dark-bg-card overflow-hidden transition-colors duration-200">
             {/* 文件列表 */}
             <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-1 scrollbar-thin">
             {filteredItems.length === 0 ? (
@@ -408,29 +408,29 @@ export default function Sessions() {
                   }}
                   className={`group flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
                     selectedItem?.relative_path === item.relative_path
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                      : "border-gray-200 dark:border-dark-border-subtle hover:border-gray-300 dark:hover:border-dark-border-default hover:bg-gray-50 dark:hover:bg-dark-bg-hover"
                   }`}
                 >
                   <div className="flex-shrink-0">
                     {item.type === "directory" ? (
-                      <Folder className="w-5 h-5 text-blue-500" />
+                      <Folder className="w-5 h-5 text-blue-500 dark:text-blue-400" />
                     ) : (
-                      <File className="w-5 h-5 text-gray-400" />
+                      <File className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-medium text-gray-900 truncate text-sm">
+                      <h3 className="font-medium text-gray-900 dark:text-dark-text-primary truncate text-sm">
                         {item.name}
                       </h3>
                       {isProtectedItem(item.name) && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 flex-shrink-0">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400 flex-shrink-0">
                           {t("sessions.protected")}
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-dark-text-muted mt-0.5">
                       {item.type === "file" && (
                         <span>{formatSize(item.size)}</span>
                       )}
@@ -447,7 +447,7 @@ export default function Sessions() {
                           e.stopPropagation();
                           renameItem(item);
                         }}
-                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
+                        className="p-1.5 text-gray-400 dark:text-dark-text-muted hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-all"
                         title={t("sessions.rename")}
                       >
                         <Edit2 className="w-4 h-4" />
@@ -459,7 +459,7 @@ export default function Sessions() {
                           e.stopPropagation();
                           deleteItem(item);
                         }}
-                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-all"
+                        className="p-1.5 text-gray-400 dark:text-dark-text-muted hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-all"
                         title={t("sessions.delete")}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -473,20 +473,20 @@ export default function Sessions() {
         </div>
 
         {/* 右侧详情 */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+        <div className="flex-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-dark-bg-sidebar transition-colors duration-200">
           {selectedItem ? (
             <>
               {/* 详情头部 */}
-              <div className="bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
+              <div className="bg-white dark:bg-dark-bg-card border-b border-gray-200 dark:border-dark-border-subtle px-6 py-4 flex-shrink-0 transition-colors duration-200">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-gray-400" />
-                      <h2 className="text-lg font-semibold text-gray-900 truncate">
+                      <FileText className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
+                      <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary truncate">
                         {selectedItem.name}
                       </h2>
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-gray-500 dark:text-dark-text-muted mt-1">
                       {formatSize(selectedItem.size)} ·{" "}
                       {formatTimestamp(selectedItem.modified)}
                     </p>
@@ -496,7 +496,7 @@ export default function Sessions() {
                       setSelectedItem(null);
                       setFileContent("");
                     }}
-                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="p-2 text-gray-400 dark:text-dark-text-muted hover:text-gray-600 dark:hover:text-dark-text-primary hover:bg-gray-100 dark:hover:bg-dark-bg-hover rounded-lg transition-colors"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -505,8 +505,8 @@ export default function Sessions() {
 
               {/* 内容区域 */}
               <div className="flex-1 min-h-0 overflow-y-auto p-6 scrollbar-thin">
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                  <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono leading-relaxed">
+                <div className="bg-white dark:bg-dark-bg-card rounded-lg border border-gray-200 dark:border-dark-border-subtle p-6 transition-colors duration-200">
+                  <pre className="whitespace-pre-wrap text-sm text-gray-800 dark:text-dark-text-secondary font-mono leading-relaxed">
                     {fileContent}
                   </pre>
                 </div>
@@ -528,8 +528,8 @@ export default function Sessions() {
       {/* 创建文件夹对话框 */}
       {createFolderDialog.isOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">{t("sessions.createFolder")}</h3>
+          <div className="bg-white dark:bg-dark-bg-card rounded-lg p-6 w-full max-w-md transition-colors duration-200">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary mb-4">{t("sessions.createFolder")}</h3>
             <input
               type="text"
               placeholder={t("sessions.folderName")}
@@ -548,14 +548,14 @@ export default function Sessions() {
                 }
               }}
               autoFocus
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-dark-bg-sidebar text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted transition-colors duration-200"
             />
             <div className="flex justify-end gap-2 mt-4">
               <button
                 onClick={() =>
                   setCreateFolderDialog({ isOpen: false, folderName: "" })
                 }
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="px-4 py-2 text-gray-700 dark:text-dark-text-primary hover:bg-gray-100 dark:hover:bg-dark-bg-hover rounded-lg transition-colors"
               >
                 {t("config.cancel")}
               </button>
@@ -573,8 +573,8 @@ export default function Sessions() {
       {/* 重命名对话框 */}
       {renameDialog.isOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="bg-white dark:bg-dark-bg-card rounded-lg p-6 w-full max-w-md transition-colors duration-200">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary mb-4">
               {renameDialog.item?.type === "directory" ? t("sessions.renameFolder") : t("sessions.renameFile")}
             </h3>
             <input
@@ -595,14 +595,14 @@ export default function Sessions() {
                 }
               }}
               autoFocus
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-dark-bg-sidebar text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted transition-colors duration-200"
             />
             <div className="flex justify-end gap-2 mt-4">
               <button
                 onClick={() =>
                   setRenameDialog({ isOpen: false, item: null, newName: "" })
                 }
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="px-4 py-2 text-gray-700 dark:text-dark-text-primary hover:bg-gray-100 dark:hover:bg-dark-bg-hover rounded-lg transition-colors"
               >
                 {t("config.cancel")}
               </button>

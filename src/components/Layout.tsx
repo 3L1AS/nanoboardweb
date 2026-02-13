@@ -10,9 +10,12 @@ import {
   Square,
   RefreshCw,
   Languages,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { processApi } from "../lib/tauri";
 import { useToast } from "../contexts/ToastContext";
+import { useTheme } from "../contexts/ThemeContext";
 
 interface LayoutProps {
   children: ReactNode;
@@ -26,6 +29,7 @@ interface Status {
 
 export default function Layout({ children }: LayoutProps) {
   const { t, i18n } = useTranslation();
+  const { theme, toggleTheme } = useTheme();
   const [status, setStatus] = useState<Status>({ running: false });
   const [loading, setLoading] = useState(false);
   const toast = useToast();
@@ -136,34 +140,47 @@ export default function Layout({ children }: LayoutProps) {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-white text-gray-900">
+    <div className="flex flex-col h-screen bg-white dark:bg-dark-bg-base text-gray-900 dark:text-dark-text-primary transition-colors duration-200">
       {/* 主体内容 */}
       <div className="flex-1 flex overflow-hidden">
         {/* 侧边栏 */}
-        <aside className="w-56 bg-gray-50 border-r border-gray-200 flex flex-col">
+        <aside className="w-56 bg-gray-50 dark:bg-dark-bg-sidebar border-r border-gray-200 dark:border-dark-border-default flex flex-col transition-colors duration-200">
           {/* Logo 区域 */}
-          <div className="p-6 border-b border-gray-200">
+          <div className="p-6 border-b border-gray-200 dark:border-dark-border-subtle">
             <div className="flex flex-col items-center gap-3">
-              <img
-                src="/assets/logo.png"
-                alt={t("layout.logoAlt")}
-                className="w-12 h-12 rounded-lg"
-              />
-              <h1 className="text-lg font-semibold text-gray-900">
+              {/* Logo 统一浅灰色背景 */}
+              <div className="p-3 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-dark-bg-sidebar dark:to-dark-bg-hover rounded-2xl shadow-sm transition-all duration-200">
+                <img
+                  src="/assets/logo.png"
+                  alt={t("layout.logoAlt")}
+                  className="w-12 h-12 rounded-lg"
+                />
+              </div>
+              <h1 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
                 {t("app.name")}
               </h1>
-              {/* 语言切换标志 */}
-              <button
-                onClick={() => {
-                  const newLang = i18n.language === 'zh-CN' ? 'en-US' : 'zh-CN';
-                  i18n.changeLanguage(newLang);
-                }}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all text-xs font-medium"
-                title={t("language.switch")}
-              >
-                <Languages className="w-3 h-3" />
-                <span>{i18n.language === 'zh-CN' ? '中文' : 'EN'}</span>
-              </button>
+              {/* 语言和主题切换 */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const newLang = i18n.language === 'zh-CN' ? 'en-US' : 'zh-CN';
+                    i18n.changeLanguage(newLang);
+                  }}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg-hover dark:hover:bg-dark-bg-active text-gray-600 dark:text-dark-text-primary transition-all text-xs font-medium"
+                  title={t("language.switch")}
+                >
+                  <Languages className="w-3 h-3" />
+                  <span>{i18n.language === 'zh-CN' ? '中文' : 'EN'}</span>
+                </button>
+                <button
+                  onClick={toggleTheme}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg-hover dark:hover:bg-dark-bg-active text-gray-600 dark:text-dark-text-primary transition-all text-xs font-medium"
+                  title={theme === 'dark' ? t("language.lightMode") : t("language.darkMode")}
+                >
+                  {theme === 'dark' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
+                  <span>{i18n.language === 'zh-CN' ? (theme === 'dark' ? '浅色' : '深色') : (theme === 'dark' ? 'Light' : 'Dark')}</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -176,8 +193,8 @@ export default function Layout({ children }: LayoutProps) {
                 className={({ isActive }) =>
                   `group flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                     isActive
-                      ? "bg-blue-50 text-blue-600 font-medium"
-                      : "text-gray-600 hover:bg-gray-100"
+                      ? "bg-blue-50 dark:bg-dark-bg-active text-blue-600 dark:text-dark-text-primary font-medium"
+                      : "text-gray-600 hover:bg-gray-100 dark:hover:bg-dark-bg-hover dark:text-dark-text-primary"
                   }`
                 }
               >
@@ -188,14 +205,14 @@ export default function Layout({ children }: LayoutProps) {
           </nav>
 
           {/* 控制按钮 */}
-          <div className="p-4 border-t border-gray-200 space-y-2">
+          <div className="p-4 border-t border-gray-200 dark:border-dark-border-subtle space-y-2">
             <button
               onClick={handleToggle}
               disabled={loading}
               className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg transition-all font-medium text-sm ${
                 status.running
-                  ? "bg-red-50 text-red-600 hover:bg-red-100"
-                  : "bg-green-50 text-green-600 hover:bg-green-100"
+                  ? "bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 dark:text-red-200"
+                  : "bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/40 dark:text-green-200"
               } disabled:opacity-50 disabled:cursor-not-allowed`}
               title={status.running ? t("layout.stopNanobot") : t("layout.startNanobot")}
             >
@@ -212,7 +229,7 @@ export default function Layout({ children }: LayoutProps) {
             <button
               onClick={handleRestart}
               disabled={loading || !status.running}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/40 dark:text-amber-200 transition-all font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               title={t("layout.restartNanobot")}
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -222,7 +239,7 @@ export default function Layout({ children }: LayoutProps) {
         </aside>
 
         {/* 主内容区 */}
-        <main className="flex-1 flex flex-col overflow-hidden bg-white">
+        <main className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-dark-bg-base transition-colors duration-200">
           {children}
         </main>
       </div>

@@ -6,6 +6,7 @@ mod process;
 mod logger;
 mod network;
 mod session;
+mod theme;
 
 use std::sync::Mutex;
 use std::sync::Arc;
@@ -27,6 +28,7 @@ async fn main() {
         .manage(Arc::new(tokio::sync::Mutex::new(logger::FileTracker::new())))
         .manage(Arc::new(logger::WatcherHandle::new()))
         .manage(std::sync::Mutex::new(network::NetworkMonitor::new()))
+        .manage(theme::ThemeState::new())
         .invoke_handler(tauri::generate_handler![
             // Config commands
             config::load_config,
@@ -75,6 +77,10 @@ async fn main() {
             session::delete_folder,
             session::delete_file,
             session::rename_item,
+            // Theme commands
+            theme::get_theme,
+            theme::set_theme,
+            theme::toggle_theme,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

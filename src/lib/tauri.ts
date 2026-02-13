@@ -95,3 +95,10 @@ export const events = {
     listen<string[]>("log-update", (event) => callback(event.payload)),
 };
 
+
+// Theme API
+export const themeApi = {
+  getTheme: () => invoke<string>("get_theme"),
+  setTheme: (theme: string) => invoke<string>("set_theme", { theme }),
+  toggleTheme: () => invoke<string>("toggle_theme"),
+};

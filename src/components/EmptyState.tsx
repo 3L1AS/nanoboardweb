@@ -22,13 +22,13 @@ export default function EmptyState({
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4">
       {Icon && (
-        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-          <Icon className="w-8 h-8 text-gray-400" />
+        <div className="w-16 h-16 bg-gray-100 dark:bg-dark-bg-hover rounded-full flex items-center justify-center mb-4 transition-colors duration-200">
+          <Icon className="w-8 h-8 text-gray-400 dark:text-dark-text-muted" />
         </div>
       )}
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">{title || t("emptyState.title")}</h3>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary mb-2">{title || t("emptyState.title")}</h3>
       {description && (
-        <p className="text-sm text-gray-500 mb-6 text-center max-w-md">{description || t("emptyState.description")}</p>
+        <p className="text-sm text-gray-500 dark:text-dark-text-muted mb-6 text-center max-w-md">{description || t("emptyState.description")}</p>
       )}
       {action && (
         <button

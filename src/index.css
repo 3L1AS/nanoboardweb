@@ -42,6 +42,35 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* VSCode Default Dark Modern 主题配色 */
+.dark {
+  --bg-primary: #1E1E1E;
+  --bg-secondary: #252526;
+  --bg-tertiary: #2A2D2D;
+  --bg-card: #1E1E1E;
+  --bg-elevated: #252526;
+
+  --accent-primary: #007ACC;
+  --accent-secondary: #9CDCFE;
+  --accent-success: #4EC9B0;
+  --accent-warning: #DCDCAA;
+  --accent-error: #F48771;
+  --accent-info: #75BEFF;
+
+  --text-primary: #D4D4D4;
+  --text-secondary: #9CDCFE;
+  --text-muted: #858585;
+
+  --border-subtle: #3C3C3C;
+  --border-default: #454545;
+  --border-strong: #555555;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+  --shadow-xl: 0 20px rgba(0 0 0 / 0.7);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -53,6 +82,7 @@ body {
   min-height: 100vh;
   background: var(--bg-primary);
   color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 #root {
@@ -79,6 +109,15 @@ body {
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.25);
+  }
+
+  /* 暗色模式下的滚动条 */
+  .dark .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  .dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
   }
 
   /* 隐藏滚动条 */

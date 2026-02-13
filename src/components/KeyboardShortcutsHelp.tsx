@@ -19,15 +19,15 @@ export default function KeyboardShortcutsHelp({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+      <div className="bg-white dark:bg-dark-bg-card rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden transition-colors duration-200">
         {/* 头部 */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">{t("keyboardShortcuts.title")}</h2>
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-dark-border-subtle transition-colors duration-200">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-dark-text-primary transition-colors duration-200">{t("keyboardShortcuts.title")}</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-dark-bg-hover rounded-lg transition-colors duration-200"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-gray-500 dark:text-dark-text-muted transition-colors duration-200" />
           </button>
         </div>
 
@@ -37,14 +37,14 @@ export default function KeyboardShortcutsHelp({
             {shortcuts.map((shortcut, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-dark-bg-sidebar rounded-lg transition-colors duration-200"
               >
-                <span className="text-sm text-gray-700">{shortcut.description}</span>
+                <span className="text-sm text-gray-700 dark:text-dark-text-secondary transition-colors duration-200">{shortcut.description}</span>
                 <div className="flex gap-1">
                   {shortcut.keys.map((key, i) => (
                     <span
                       key={i}
-                      className="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-mono text-gray-700"
+                      className="px-2 py-1 bg-white dark:bg-dark-bg-card border border-gray-300 dark:border-dark-border-subtle rounded text-xs font-mono text-gray-700 dark:text-dark-text-secondary transition-colors duration-200"
                     >
                       {key}
                     </span>

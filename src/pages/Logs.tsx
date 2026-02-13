@@ -335,21 +335,21 @@ export default function Logs() {
   }
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-col">
+    <div className="flex-1 overflow-hidden flex flex-col bg-white dark:bg-dark-bg-base transition-colors duration-200">
       {/* 头部 */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <h1 className="text-xl font-semibold text-gray-900 mb-4">{t("logs.title")}</h1>
+      <div className="bg-white dark:bg-dark-bg-card border-b border-gray-200 dark:border-dark-border-subtle px-6 py-4 transition-colors duration-200">
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-dark-text-primary mb-4">{t("logs.title")}</h1>
 
         {/* 搜索框 */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-dark-text-muted" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder={useRegex ? t("logs.searchWithRegex") : t("logs.searchLogs")}
-            className={`w-full pl-10 pr-24 py-2 bg-gray-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${
-              regexError ? "border-red-300" : "border-gray-200"
+            className={`w-full pl-10 pr-24 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted transition-colors duration-200 ${
+              regexError ? "border-red-300 dark:border-red-500/50" : "border-gray-200 dark:border-dark-border-subtle"
             }`}
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -357,8 +357,8 @@ export default function Logs() {
               onClick={toggleRegexMode}
               className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors text-xs font-medium ${
                 useRegex
-                  ? "bg-purple-100 text-purple-700 hover:bg-purple-200"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50"
+                  : "bg-gray-100 dark:bg-dark-bg-hover text-gray-600 dark:text-dark-text-secondary hover:bg-gray-200 dark:hover:bg-dark-bg-active"
               }`}
               title={t("logs.toggleSearchMode", { mode: useRegex ? t("logs.normalSearch") : t("logs.regexSearch") })}
             >
@@ -368,7 +368,7 @@ export default function Logs() {
             {searchQuery && (
               <button
                 onClick={clearSearch}
-                className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                className="p-1 text-gray-400 dark:text-dark-text-muted hover:text-gray-600 dark:hover:text-dark-text-primary transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -378,7 +378,7 @@ export default function Logs() {
 
         {/* 正则表达式错误提示 */}
         {regexError && (
-          <div className="mt-2 text-sm text-red-600 flex items-center gap-2">
+          <div className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
             <span>⚠️ {regexError}</span>
           </div>
         )}
@@ -386,14 +386,14 @@ export default function Logs() {
         {/* 日志级别过滤和操作按钮 */}
         <div className="flex items-center gap-3 mt-3 flex-wrap">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">{t("logs.level")}</span>
+            <span className="text-sm text-gray-500 dark:text-dark-text-muted">{t("logs.level")}</span>
             <div className="flex gap-1">
               <button
                 onClick={() => handleLevelChange("all")}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   logLevel === "all"
-                    ? "bg-gray-800 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    ? "bg-gray-800 dark:bg-dark-text-primary text-white"
+                    : "bg-gray-100 dark:bg-dark-bg-hover text-gray-600 dark:text-dark-text-secondary hover:bg-gray-200 dark:hover:bg-dark-bg-active"
                 }`}
               >
                 {t("logs.all")}
@@ -403,7 +403,7 @@ export default function Logs() {
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   logLevel === "info"
                     ? "bg-blue-600 text-white"
-                    : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                    : "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50"
                 }`}
               >
                 INFO
@@ -413,7 +413,7 @@ export default function Logs() {
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   logLevel === "debug"
                     ? "bg-gray-600 text-white"
-                    : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+                    : "bg-gray-50 dark:bg-dark-bg-hover text-gray-600 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-bg-active"
                 }`}
               >
                 DEBUG
@@ -423,7 +423,7 @@ export default function Logs() {
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   logLevel === "warn"
                     ? "bg-amber-600 text-white"
-                    : "bg-amber-50 text-amber-600 hover:bg-amber-100"
+                    : "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/50"
                 }`}
               >
                 WARN
@@ -433,7 +433,7 @@ export default function Logs() {
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   logLevel === "error"
                     ? "bg-red-600 text-white"
-                    : "bg-red-50 text-red-600 hover:bg-red-100"
+                    : "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50"
                 }`}
               >
                 ERROR
@@ -448,7 +448,7 @@ export default function Logs() {
               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium ${
                 showStatistics
                   ? "bg-blue-600 text-white hover:bg-blue-700"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  : "bg-gray-100 dark:bg-dark-bg-hover text-gray-700 dark:text-dark-text-primary hover:bg-gray-200 dark:hover:bg-dark-bg-active"
               }`}
             >
               <BarChart3 className="w-4 h-4" />
@@ -457,7 +457,7 @@ export default function Logs() {
             <button
               onClick={exportLogs}
               disabled={filteredLogs.length === 0}
-              className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:cursor-not-allowed rounded-lg transition-colors text-sm font-medium text-gray-700"
+              className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-dark-bg-hover hover:bg-gray-200 dark:hover:bg-dark-bg-active disabled:bg-gray-50 dark:disabled:bg-dark-bg-sidebar disabled:cursor-not-allowed rounded-lg transition-colors text-sm font-medium text-gray-700 dark:text-dark-text-primary"
               title={t("logs.export")}
             >
               <Download className="w-4 h-4" />
@@ -489,7 +489,7 @@ export default function Logs() {
 
         {/* 过滤结果提示 */}
         {(searchQuery || logLevel !== "all") && (
-          <div className="mt-2 text-sm text-gray-500">
+          <div className="mt-2 text-sm text-gray-500 dark:text-dark-text-muted">
             {t("logs.findMatches", { count: filteredLogs.length, total: logs.length })}
           </div>
         )}
@@ -497,24 +497,24 @@ export default function Logs() {
 
       {/* 统计面板 */}
       {showStatistics && (
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="bg-white dark:bg-dark-bg-card border-b border-gray-200 dark:border-dark-border-subtle px-6 py-4 transition-colors duration-200">
           <div className="max-w-6xl">
-            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="p-4 bg-gray-50 dark:bg-dark-bg-sidebar rounded-lg border border-gray-200 dark:border-dark-border-subtle transition-colors duration-200">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-gray-900">{t("logs.logStatistics")}</h3>
-                <span className="text-xs text-gray-500">{t("logs.totalLogsCount", { total: statistics.total })}</span>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-dark-text-primary">{t("logs.logStatistics")}</h3>
+                <span className="text-xs text-gray-500 dark:text-dark-text-muted">{t("logs.totalLogsCount", { total: statistics.total })}</span>
               </div>
 
               <div className="space-y-3">
                 {/* INFO */}
                 <div>
                   <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="text-blue-600 font-medium">INFO</span>
-                    <span className="text-gray-600">
+                    <span className="text-blue-600 dark:text-blue-400 font-medium">INFO</span>
+                    <span className="text-gray-600 dark:text-dark-text-secondary">
                       {statistics.info} {t("dashboard.entries")} ({statistics.infoPercent.toFixed(1)}%)
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-gray-200 dark:bg-dark-bg-hover rounded-full h-2">
                     <div
                       className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${statistics.infoPercent}%` }}
@@ -525,12 +525,12 @@ export default function Logs() {
                 {/* DEBUG */}
                 <div>
                   <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="text-gray-600 font-medium">DEBUG</span>
-                    <span className="text-gray-600">
+                    <span className="text-gray-600 dark:text-gray-400 font-medium">DEBUG</span>
+                    <span className="text-gray-600 dark:text-dark-text-secondary">
                       {statistics.debug} {t("dashboard.entries")} ({statistics.debugPercent.toFixed(1)}%)
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-gray-200 dark:bg-dark-bg-hover rounded-full h-2">
                     <div
                       className="bg-gray-600 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${statistics.debugPercent}%` }}
@@ -541,12 +541,12 @@ export default function Logs() {
                 {/* WARN */}
                 <div>
                   <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="text-amber-600 font-medium">WARN</span>
-                    <span className="text-gray-600">
+                    <span className="text-amber-600 dark:text-amber-400 font-medium">WARN</span>
+                    <span className="text-gray-600 dark:text-dark-text-secondary">
                       {statistics.warn} {t("dashboard.entries")} ({statistics.warnPercent.toFixed(1)}%)
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-gray-200 dark:bg-dark-bg-hover rounded-full h-2">
                     <div
                       className="bg-amber-600 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${statistics.warnPercent}%` }}
@@ -557,12 +557,12 @@ export default function Logs() {
                 {/* ERROR */}
                 <div>
                   <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="text-red-600 font-medium">ERROR</span>
-                    <span className="text-gray-600">
+                    <span className="text-red-600 dark:text-red-400 font-medium">ERROR</span>
+                    <span className="text-gray-600 dark:text-dark-text-secondary">
                       {statistics.error} {t("dashboard.entries")} ({statistics.errorPercent.toFixed(1)}%)
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-gray-200 dark:bg-dark-bg-hover rounded-full h-2">
                     <div
                       className="bg-red-600 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${statistics.errorPercent}%` }}
@@ -578,10 +578,10 @@ export default function Logs() {
       {/* 日志内容 */}
       <div
         ref={logContainerRef}
-        className="flex-1 overflow-y-auto bg-gray-50 p-4 font-mono text-sm scrollbar-thin"
+        className="flex-1 overflow-y-auto bg-gray-50 dark:bg-dark-bg-sidebar p-4 font-mono text-sm scrollbar-thin transition-colors duration-200"
       >
         {loading ? (
-          <div className="flex items-center justify-center h-full text-gray-500">
+          <div className="flex items-center justify-center h-full text-gray-500 dark:text-dark-text-muted">
             {t("config.loading")}
           </div>
         ) : filteredLogs.length === 0 ? (
@@ -599,7 +599,7 @@ export default function Logs() {
             {filteredLogs.map((log, index) => (
               <div
                 key={index}
-                className="hover:bg-white px-2 py-1 rounded text-gray-700 whitespace-pre-wrap break-words border border-transparent hover:border-gray-200"
+                className="hover:bg-white dark:hover:bg-dark-bg-card px-2 py-1 rounded text-gray-700 dark:text-dark-text-secondary whitespace-pre-wrap break-words border border-transparent hover:border-gray-200 dark:hover:border-dark-border-subtle transition-colors duration-200"
               >
                 {log}
               </div>
@@ -609,7 +609,7 @@ export default function Logs() {
       </div>
 
       {/* 状态栏 */}
-      <div className="bg-white border-t border-gray-200 px-4 py-2 flex items-center justify-between text-sm text-gray-500">
+      <div className="bg-white dark:bg-dark-bg-card border-t border-gray-200 dark:border-dark-border-subtle px-4 py-2 flex items-center justify-between text-sm text-gray-500 dark:text-dark-text-muted transition-colors duration-200">
         <span>
           {searchQuery
             ? t("logs.displayLogs", { filtered: filteredLogs.length, total: logs.length })
@@ -617,9 +617,9 @@ export default function Logs() {
         </span>
         <span>
           {streaming ? (
-            <span className="text-green-600">● {t("logs.realtimeMonitoring")}</span>
+            <span className="text-green-600 dark:text-green-400">● {t("logs.realtimeMonitoring")}</span>
           ) : (
-            <span className="text-amber-600">● {t("logs.paused")}</span>
+            <span className="text-amber-600 dark:text-amber-400">● {t("logs.paused")}</span>
           )}
         </span>
       </div>
