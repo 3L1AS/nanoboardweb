@@ -33,7 +33,7 @@ interface Breadcrumb {
   path: string;
 }
 
-export default function Sessions() {
+export default function FileManager() {
   const { t, i18n } = useTranslation();
   const [currentPath, setCurrentPath] = useState<string>("");
   const [items, setItems] = useState<FsItem[]>([]);

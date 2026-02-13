@@ -8,7 +8,7 @@ import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import ConfigEditor from "./pages/ConfigEditor";
 import Logs from "./pages/Logs";
-import Sessions from "./pages/Sessions";
+import FileManager from "./pages/FileManager";
 import { ContextMenu } from "./components/ContextMenu";
 import ErrorBoundary from "./components/ErrorBoundary";
 
@@ -75,7 +75,7 @@ function AppContent() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/config" element={<ConfigEditor />} />
           <Route path="/logs" element={<Logs />} />
-          <Route path="/sessions" element={<Sessions />} />
+          <Route path="/files" element={<FileManager />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </ContextMenu>

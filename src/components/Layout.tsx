@@ -37,7 +37,7 @@ export default function Layout({ children }: LayoutProps) {
   const navItems = [
     { path: "/", label: t("nav.dashboard"), icon: LayoutDashboard },
     { path: "/logs", label: t("nav.logs"), icon: ScrollText },
-    { path: "/sessions", label: t("nav.sessions"), icon: FileText },
+    { path: "/files", label: t("nav.sessions"), icon: FileText },
     { path: "/config", label: t("nav.config"), icon: Settings },
   ];
 
