@@ -23,7 +23,6 @@ import {
   Copy,
   FolderOpen,
   Code,
-  Save,
 } from "lucide-react";
 import EmptyState from "../components/EmptyState";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -41,12 +40,11 @@ import type {
 } from "@/config/types";
 import { AVAILABLE_PROVIDERS } from "@/config/providers";
 import { CHANNELS_CONFIG } from "@/config/channels";
-import { formatTimestamp, formatSize } from "@/utils/format";
-// TODO: 下一步重构使用这些组件
-// import ProviderEditModal from "@/components/config/ProviderEditModal";
-// import ChannelEditModal from "@/components/config/ChannelEditModal";
-// import HistoryPanel from "@/components/config/HistoryPanel";
-// import CodeEditorView from "@/components/config/CodeEditorView";
+import { formatTimestamp } from "@/utils/format";
+import ProviderEditModal from "@/components/config/ProviderEditModal";
+import ChannelEditModal from "@/components/config/ChannelEditModal";
+import HistoryPanel from "@/components/config/HistoryPanel";
+import CodeEditorView from "@/components/config/CodeEditorView";
 
 const TEMPLATES_STORAGE_KEY = "nanobot_config_templates";
 const PROVIDER_AGENT_CONFIGS_KEY = "nanoboard_provider_agent_configs";
@@ -234,6 +232,20 @@ export default function ConfigEditor() {
     } catch (error) {
       setCodeError(`${t("config.formatFailed")}: ${t("config.jsonSyntaxError")}`);
       toast.showError(`${t("config.formatFailed")}: ${t("config.jsonSyntaxError")}`);
+    }
+  }
+
+  function handleCodeChange(newCode: string) {
+    setCode(newCode);
+    try {
+      JSON.parse(newCode);
+      setCodeError(null);
+    } catch (error) {
+      if (typeof error === "object" && error !== null && "message" in error) {
+        setCodeError(`${t("config.jsonSyntaxError")} ${(error as { message: string }).message}`);
+      } else {
+        setCodeError(t("config.jsonSyntaxError"));
+      }
     }
   }
 
@@ -683,86 +695,14 @@ export default function ConfigEditor() {
             <div className="max-w-6xl mx-auto space-y-6">
 
             {/* {t("config.history")}模态框 */}
-        {showHistory && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-dark-bg-card rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col transition-colors duration-200">
-              {/* 头部 */}
-              <div className="p-6 border-b border-gray-200 dark:border-dark-border-subtle">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-amber-50 dark:bg-amber-900/30 rounded-lg">
-                      <History className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                    </div>
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
-                      {t("config.configHistory")}
-                    </h2>
-                  </div>
-                  <button
-                    onClick={() => setShowHistory(false)}
-                    className="p-2 hover:bg-gray-100 dark:hover:bg-dark-bg-hover rounded-lg transition-colors"
-                  >
-                    <svg className="w-5 h-5 text-gray-500 dark:text-dark-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              {/* 内容 */}
-              <div className="flex-1 overflow-y-auto p-6">
-                {loadingHistory ? (
-                  <div className="flex items-center justify-center py-8 text-gray-500 dark:text-dark-text-muted text-sm">
-                    {t("config.loading")}
-                  </div>
-                ) : historyVersions.length === 0 ? (
-                  <EmptyState
-                    icon={Inbox}
-                    title={t("config.noHistory")}
-                    description={t("config.noHistoryDesc")}
-                  />
-                ) : (
-                  <div className="space-y-2">
-                    {historyVersions.map((version) => (
-                      <div
-                        key={version.filename}
-                        className="group p-4 rounded-lg bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle hover:border-blue-200 dark:hover:border-blue-500/50 transition-colors"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-1">
-                              <span className="text-sm font-medium text-gray-900 dark:text-dark-text-primary">
-                                {formatTimestamp(version.timestamp)}
-                              </span>
-                              <span className="text-xs text-gray-500 dark:text-dark-text-muted">
-                                {formatSize(version.size)}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => restoreVersion(version)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
-                            >
-                              <RotateCcw className="w-4 h-4" />
-                              {t("config.restore")}
-                            </button>
-                            <button
-                              onClick={() => deleteVersion(version)}
-                              className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                              title={t("config.delete")}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        <HistoryPanel
+          isOpen={showHistory}
+          loading={loadingHistory}
+          versions={historyVersions}
+          onClose={() => setShowHistory(false)}
+          onRestore={restoreVersion}
+          onDelete={deleteVersion}
+        />
 
         {/* 模板面板 */}
         {showTemplates && (
@@ -1059,72 +999,15 @@ export default function ConfigEditor() {
           </div>
         </div>
       ) : (
-        /* 代码编辑器视图 */
-        <div className="flex-1 overflow-hidden bg-white dark:bg-dark-bg-base transition-colors duration-200">
-          <div className="p-6">
-            <div className="max-w-6xl mx-auto">
-              {/* 代码编辑器工具栏 */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-4">
-                  {code !== JSON.stringify(originalConfig, null, 2) && (
-                    <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-3 py-1.5 rounded-lg border border-amber-200 dark:border-amber-500/50 text-sm font-medium transition-colors duration-200">
-                      <span className="w-2 h-2 bg-amber-500 rounded-full"></span>
-                      <span>{t("config.unsaved")}</span>
-                    </div>
-                  )}
-                  {codeError && (
-                    <div className="flex items-center gap-1.5 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-500/50 text-sm font-medium transition-colors duration-200">
-                      <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                      <span>{codeError}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={formatCode}
-                    className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-dark-bg-hover hover:bg-gray-200 dark:hover:bg-dark-bg-active rounded-lg font-medium text-gray-700 dark:text-dark-text-primary transition-colors text-sm"
-                  >
-                    <Code className="w-4 h-4" />
-                    {t("config.formatCode")}
-                  </button>
-                  <button
-                    onClick={saveCodeConfig}
-                    disabled={savingCode || code === JSON.stringify(originalConfig, null, 2) || !!codeError}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-dark-bg-active disabled:cursor-not-allowed rounded-lg font-medium text-white transition-colors text-sm"
-                  >
-                    <Save className="w-4 h-4" />
-                    {savingCode ? t("config.saving") : t("config.saveConfig")}
-                  </button>
-                </div>
-              </div>
-
-              {/* 代码编辑器 */}
-              <textarea
-                value={code}
-                onChange={(e) => {
-                  setCode(e.target.value);
-                  try {
-                    JSON.parse(e.target.value);
-                    setCodeError(null);
-                  } catch (error) {
-                    if (typeof error === "object" && error !== null && "message" in error) {
-                      setCodeError(`${t("config.jsonSyntaxError")} ${(error as { message: string }).message}`);
-                    } else {
-                      setCodeError(t("config.jsonSyntaxError"));
-                    }
-                  }
-                }}
-                className={`w-full h-[calc(100vh-200px)] font-mono text-sm p-6 rounded-lg focus:outline-none resize-none transition-colors duration-200 ${
-                  codeError
-                    ? "bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-500/50 text-red-900 dark:text-red-300"
-                    : "bg-gray-900 dark:bg-dark-bg-sidebar text-gray-100 dark:text-dark-text-primary"
-                }`}
-                placeholder={t("config.editJsonPlaceholder")}
-                spellCheck={false}
-              />
-            </div>
-          </div>
-        </div>
+        <CodeEditorView
+          code={code}
+          codeError={codeError}
+          savingCode={savingCode}
+          hasChanges={code !== JSON.stringify(originalConfig, null, 2)}
+          onCodeChange={handleCodeChange}
+          onFormat={formatCode}
+          onSave={saveCodeConfig}
+        />
       )}
       </div>
 
@@ -1198,303 +1081,29 @@ export default function ConfigEditor() {
       )}
 
       {/* 提供商编辑模态框 */}
-      {editingProvider.isOpen && editingProvider.providerInfo && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-        >
-          <div
-            className="bg-white dark:bg-dark-bg-card rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col transition-colors duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* 头部 */}
-            <div className="p-6 border-b border-gray-200 dark:border-dark-border-subtle">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${editingProvider.providerInfo.colorClass.split(' text-')[0]}`}>
-                  <ProviderIcon
-                    name={editingProvider.providerInfo.icon}
-                    className={`w-6 h-6 ${'text-' + editingProvider.providerInfo.colorClass.split(' text-')[1]}`}
-                  />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
-                    {t("config.editProvider", { name: t(editingProvider.providerInfo.nameKey) })}
-                  </h3>
-                </div>
-              </div>
-
-              {/* 选项卡切换 */}
-              <div className="flex gap-2 mt-4">
-                <button
-                  onClick={() => setEditingProvider({ ...editingProvider, activeTab: "api" })}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    editingProvider.activeTab === "api"
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 dark:bg-dark-bg-hover text-gray-700 dark:text-dark-text-primary hover:bg-gray-200 dark:hover:bg-dark-bg-active"
-                  }`}
-                >
-                  {t("config.apiConfig")}
-                </button>
-                <button
-                  onClick={() => setEditingProvider({ ...editingProvider, activeTab: "agent" })}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    editingProvider.activeTab === "agent"
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 dark:bg-dark-bg-hover text-gray-700 dark:text-dark-text-primary hover:bg-gray-200 dark:hover:bg-dark-bg-active"
-                  }`}
-                >
-                  {t("config.agentConfig")}
-                </button>
-              </div>
-            </div>
-
-            {/* 内容区域 */}
-            <div className="flex-1 overflow-y-auto p-6">
-              {editingProvider.activeTab === "api" ? (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm text-gray-600 dark:text-dark-text-secondary mb-1">
-                      {t("config.apiKey")}
-                    </label>
-                    <input
-                      type="password"
-                      value={config.providers?.[editingProvider.providerId]?.apiKey || ""}
-                      onChange={(e) =>
-                        updateProvider(editingProvider.providerId, "apiKey", e.target.value)
-                      }
-                      placeholder={t("config.apiKeyPlaceholder")}
-                      className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted"
-                    />
-                    {editingProvider.providerInfo.apiUrl && (
-                      <p className="text-xs text-gray-400 dark:text-dark-text-muted mt-1">
-                        {t("config.getApiKeyAt", { url: editingProvider.providerInfo.apiUrl })}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-gray-600 dark:text-dark-text-secondary mb-1">
-                      {t("config.apiBaseUrl")}
-                    </label>
-                    <input
-                      type="text"
-                      value={config.providers?.[editingProvider.providerId]?.apiBase || ""}
-                      onChange={(e) =>
-                        updateProvider(editingProvider.providerId, "apiBase", e.target.value)
-                      }
-                      placeholder={t("config.apiBaseUrlPlaceholder")}
-                      className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted"
-                    />
-                    {editingProvider.providerInfo.apiBase && (
-                      <p className="text-xs text-gray-400 dark:text-dark-text-muted mt-1">
-                        {t("config.apiBaseUrlDefault", { url: editingProvider.providerInfo.apiBase })}
-                      </p>
-                    )}
-                  </div>
-
-                  {config.providers?.[editingProvider.providerId] && (
-                    <div className="flex justify-end pt-2">
-                      <button
-                        onClick={() => {
-                          removeProvider(editingProvider.providerId);
-                          setEditingProvider({ isOpen: false, providerId: "", providerInfo: null, activeTab: "api" });
-                        }}
-                        className="flex items-center gap-1 px-3 py-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors text-sm"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        {t("config.deleteConfig")}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm text-gray-600 dark:text-dark-text-secondary mb-1">
-                      {t("config.model")}
-                    </label>
-                    <input
-                      type="text"
-                      value={getProviderAgentConfig(editingProvider.providerId).model || ""}
-                      onChange={(e) =>
-                        updateProviderAgentConfig(editingProvider.providerId, "model", e.target.value)
-                      }
-                      placeholder={t("config.modelPlaceholder")}
-                      className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted"
-                    />
-                    <p className="text-xs text-gray-500 dark:text-dark-text-muted mt-1">{t("config.modelDesc")}</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-gray-600 dark:text-dark-text-secondary mb-1">
-                      {t("config.maxTokens")}
-                    </label>
-                    <input
-                      type="number"
-                      value={getProviderAgentConfig(editingProvider.providerId).max_tokens || 8192}
-                      onChange={(e) =>
-                        updateProviderAgentConfig(editingProvider.providerId, "max_tokens", parseInt(e.target.value))
-                      }
-                      className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary"
-                    />
-                    <p className="text-xs text-gray-500 dark:text-dark-text-muted mt-1">{t("config.maxTokensDesc")}</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-gray-600 dark:text-dark-text-secondary mb-1">
-                      {t("config.maxToolIterations")}
-                    </label>
-                    <input
-                      type="number"
-                      value={getProviderAgentConfig(editingProvider.providerId).max_tool_iterations ?? 20}
-                      onChange={(e) =>
-                        updateProviderAgentConfig(editingProvider.providerId, "max_tool_iterations", parseInt(e.target.value))
-                      }
-                      className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary"
-                    />
-                    <p className="text-xs text-gray-500 dark:text-dark-text-muted mt-1">{t("config.maxToolIterationsDesc")}</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-gray-600 dark:text-dark-text-secondary mb-1">
-                      {t("config.workspace")}
-                    </label>
-                    <input
-                      type="text"
-                      value={getProviderAgentConfig(editingProvider.providerId).workspace || "~/.nanobot/workspace"}
-                      onChange={(e) =>
-                        updateProviderAgentConfig(editingProvider.providerId, "workspace", e.target.value)
-                      }
-                      placeholder={t("config.workspacePlaceholder")}
-                      className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted"
-                    />
-                    <p className="text-xs text-gray-500 dark:text-dark-text-muted mt-1">{t("config.workspaceDesc")}</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-gray-600 dark:text-dark-text-secondary mb-1">
-                      {t("config.temperature")}
-                    </label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="2"
-                      value={getProviderAgentConfig(editingProvider.providerId).temperature ?? 0.7}
-                      onChange={(e) =>
-                        updateProviderAgentConfig(editingProvider.providerId, "temperature", parseFloat(e.target.value))
-                      }
-                      className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary"
-                    />
-                    <p className="text-xs text-gray-500 dark:text-dark-text-muted mt-1">{t("config.temperatureDesc")}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 底部按钮 */}
-            <div className="p-6 border-t border-gray-200 dark:border-dark-border-subtle flex justify-end gap-3">
-              <button
-                onClick={() => setEditingProvider({ isOpen: false, providerId: "", providerInfo: null, activeTab: "api" })}
-                className="px-4 py-2 bg-gray-100 dark:bg-dark-bg-hover hover:bg-gray-200 dark:hover:bg-dark-bg-active text-gray-700 dark:text-dark-text-primary rounded-lg transition-colors text-sm font-medium"
-              >
-                {t("config.done")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ProviderEditModal
+        isOpen={editingProvider.isOpen}
+        providerId={editingProvider.providerId}
+        providerInfo={editingProvider.providerInfo}
+        activeTab={editingProvider.activeTab}
+        config={config}
+        providerAgentConfig={getProviderAgentConfig(editingProvider.providerId)}
+        onClose={() => setEditingProvider({ isOpen: false, providerId: "", providerInfo: null, activeTab: "api" })}
+        onTabChange={(tab) => setEditingProvider({ ...editingProvider, activeTab: tab })}
+        onUpdateProvider={updateProvider}
+        onRemoveProvider={removeProvider}
+        onUpdateProviderAgentConfig={updateProviderAgentConfig}
+      />
 
       {/* 渠道编辑模态框 */}
-      {editingChannel.isOpen && editingChannel.channelInfo && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-        >
-          <div
-            className="bg-white dark:bg-dark-bg-card rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto transition-colors duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <div className={`p-2 rounded-lg ${editingChannel.channelInfo.colorClass.split(' text-')[0]}`}>
-                <MessageSquare className={`w-6 h-6 ${'text-' + editingChannel.channelInfo.colorClass.split(' text-')[1]}`} />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
-                  {t("config.editChannel", { name: t(editingChannel.channelInfo.nameKey) })}
-                </h3>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {editingChannel.channelInfo.fields.map((field) => {
-                const currentValue = (config.channels?.[editingChannel.channelKey] as any)?.[field.name];
-                // 处理 allowFrom 字段：如果是数组，转换为逗号分隔的字符串
-                let fieldValue = currentValue !== undefined ? currentValue : (field.default ?? "");
-                if (field.name === 'allowFrom' && Array.isArray(fieldValue)) {
-                  // 如果数组为空或只包含空字符串，显示为空（表示允许所有人）
-                  if (fieldValue.length === 0 || (fieldValue.length === 1 && fieldValue[0] === '')) {
-                    fieldValue = '';
-                  } else {
-                    // 否则转换为逗号分隔的字符串
-                    fieldValue = fieldValue.join(', ');
-                  }
-                }
-
-                return (
-                  <div key={field.name}>
-                    <label className="block text-sm text-gray-600 dark:text-dark-text-secondary mb-1">
-                      {t(field.labelKey)}
-                    </label>
-                    {field.type === "select" ? (
-                      <select
-                        value={fieldValue as string}
-                        onChange={(e) =>
-                          updateChannelField(editingChannel.channelKey, field.name, e.target.value)
-                        }
-                        className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary"
-                      >
-                        {("options" in field) && field.options?.map((option: string) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    ) : field.type === "number" ? (
-                      <input
-                        type="number"
-                        value={fieldValue as number}
-                        onChange={(e) =>
-                          updateChannelField(editingChannel.channelKey, field.name, parseInt(e.target.value))
-                        }
-                        placeholder={field.placeholderKey ? t(field.placeholderKey) : undefined}
-                        className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted"
-                      />
-                    ) : (
-                      <input
-                        type={field.type === "password" ? "password" : "text"}
-                        value={fieldValue as string}
-                        onChange={(e) =>
-                          updateChannelField(editingChannel.channelKey, field.name, e.target.value)
-                        }
-                        placeholder={field.placeholderKey ? t(field.placeholderKey) : undefined}
-                        className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted"
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setEditingChannel({ isOpen: false, channelKey: "", channelInfo: null })}
-                className="px-4 py-2 bg-gray-100 dark:bg-dark-bg-hover hover:bg-gray-200 dark:hover:bg-dark-bg-active text-gray-700 dark:text-dark-text-primary rounded-lg transition-colors text-sm font-medium"
-              >
-                {t("config.done")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ChannelEditModal
+        isOpen={editingChannel.isOpen}
+        channelKey={editingChannel.channelKey}
+        channelInfo={editingChannel.channelInfo}
+        config={config}
+        onClose={() => setEditingChannel({ isOpen: false, channelKey: "", channelInfo: null })}
+        onUpdateField={updateChannelField}
+      />
     </div>
   );
 }
