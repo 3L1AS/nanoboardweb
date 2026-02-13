@@ -3,6 +3,14 @@
     "name": "nanoboard",
     "description": "Nanobot AI 助手管理桌面应用"
   },
+  "contextmenu": {
+    "refresh": "刷新页面",
+    "back": "返回",
+    "forward": "前进",
+    "copy": "复制",
+    "paste": "粘贴",
+    "toggleTheme": "切换主题"
+  },
   "nav": {
     "dashboard": "仪表盘",
     "logs": "日志监控",

@@ -442,5 +442,13 @@
     "qq": "QQ",
     "email": "Email",
     "terminal": "Terminal"
+  },
+  "contextmenu": {
+    "refresh": "Refresh Page",
+    "back": "Back",
+    "forward": "Forward",
+    "copy": "Copy",
+    "paste": "Paste",
+    "toggleTheme": "Switch Theme"
   }
 }

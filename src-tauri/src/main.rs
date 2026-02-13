@@ -7,6 +7,7 @@ mod logger;
 mod network;
 mod session;
 mod theme;
+mod menu;
 
 use std::sync::Mutex;
 use std::sync::Arc;
@@ -29,6 +30,25 @@ async fn main() {
         .manage(Arc::new(logger::WatcherHandle::new()))
         .manage(std::sync::Mutex::new(network::NetworkMonitor::new()))
         .manage(theme::ThemeState::new())
+        .setup(|app| {
+            // 构建并设置应用菜单
+            let app_handle = app.handle();
+            let menu = menu::build_menu(&app_handle);
+            app.set_menu(menu)?;
+
+            // 设置系统托盘
+            menu::setup_tray(&app_handle)?;
+
+            // 监听菜单事件
+            let app_handle = app.handle().clone();
+            let app_handle_for_menu = app_handle.clone();
+            app.on_menu_event(move |_app, event| {
+                log::info!("Menu event: {:?}", event.id);
+                menu::handle_menu_event(&app_handle_for_menu, event.id.0.as_ref());
+            });
+
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             // Config commands
             config::load_config,

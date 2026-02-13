@@ -1,26 +1,93 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { listen } from "@tauri-apps/api/event";
 import { ToastProvider } from "./contexts/ToastContext";
-import { ThemeProvider } from "./contexts/ThemeContext";
+import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
+import { processApi } from "./lib/tauri";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import ConfigEditor from "./pages/ConfigEditor";
 import Logs from "./pages/Logs";
 import Sessions from "./pages/Sessions";
+import { ContextMenu } from "./components/ContextMenu";
+
+function AppContent() {
+  const navigate = useNavigate();
+  const { toggleTheme } = useTheme();
+
+  useEffect(() => {
+    const unlisteners: Array<() => void> = [];
+
+    // 监听菜单导航事件
+    const unlistenNavigate = listen<string>("menu-navigate", (event) => {
+      navigate(event.payload);
+    });
+    unlisteners.push(() => unlistenNavigate.then(fn => fn()));
+
+    // 监听主题切换事件
+    const unlistenTheme = listen("menu-toggle-theme", () => {
+      toggleTheme();
+    });
+    unlisteners.push(() => unlistenTheme.then(fn => fn()));
+
+    // 监听启动 Nanobot 事件
+    const unlistenStart = listen("menu-start-nanobot", async () => {
+      try {
+        await processApi.start();
+      } catch (error) {
+        console.error("Failed to start nanobot:", error);
+      }
+    });
+    unlisteners.push(() => unlistenStart.then(fn => fn()));
+
+    // 监听停止 Nanobot 事件
+    const unlistenStop = listen("menu-stop-nanobot", async () => {
+      try {
+        await processApi.stop();
+      } catch (error) {
+        console.error("Failed to stop nanobot:", error);
+      }
+    });
+    unlisteners.push(() => unlistenStop.then(fn => fn()));
+
+    // 监听诊断事件
+    const unlistenDiagnostics = listen("menu-diagnostics", () => {
+      navigate("/");
+    });
+    unlisteners.push(() => unlistenDiagnostics.then(fn => fn()));
+
+    // 监听关于事件
+    const unlistenAbout = listen("menu-about", () => {
+      console.log("About Nanoboard");
+    });
+    unlisteners.push(() => unlistenAbout.then(fn => fn()));
+
+    return () => {
+      unlisteners.forEach(fn => fn());
+    };
+  }, [navigate, toggleTheme]);
+
+  return (
+    <Layout>
+      <ContextMenu>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/config" element={<ConfigEditor />} />
+          <Route path="/logs" element={<Logs />} />
+          <Route path="/sessions" element={<Sessions />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </ContextMenu>
+    </Layout>
+  );
+}
 
 function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
         <ToastProvider>
-          <Layout>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/config" element={<ConfigEditor />} />
-              <Route path="/logs" element={<Logs />} />
-              <Route path="/sessions" element={<Sessions />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Layout>
+          <AppContent />
         </ToastProvider>
       </ThemeProvider>
     </BrowserRouter>

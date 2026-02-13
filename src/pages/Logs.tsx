@@ -25,6 +25,26 @@ const LOG_LEVEL_PATTERNS = {
   error: /\|\s*ERROR\s*\|/i,
 } as const;
 
+// 日志级别颜色映射
+function getLogLevelColor(log: string): string {
+  // 检测日志级别并返回对应的颜色类名
+  if (LOG_LEVEL_PATTERNS.debug.test(log)) {
+    // DEBUG: 灰色
+    return "text-gray-500 dark:text-gray-400";
+  } else if (LOG_LEVEL_PATTERNS.info.test(log)) {
+    // INFO: 蓝色
+    return "text-blue-600 dark:text-blue-400";
+  } else if (LOG_LEVEL_PATTERNS.warn.test(log)) {
+    // WARN: 琥珀色/黄色
+    return "text-amber-600 dark:text-amber-400";
+  } else if (LOG_LEVEL_PATTERNS.error.test(log)) {
+    // ERROR: 红色
+    return "text-red-600 dark:text-red-400";
+  }
+  // 默认颜色
+  return "text-gray-700 dark:text-dark-text-secondary";
+}
+
 export default function Logs() {
   const { t } = useTranslation();
   const [logs, setLogs] = useState<string[]>([]);
@@ -599,7 +619,7 @@ export default function Logs() {
             {filteredLogs.map((log, index) => (
               <div
                 key={index}
-                className="hover:bg-white dark:hover:bg-dark-bg-card px-2 py-1 rounded text-gray-700 dark:text-dark-text-secondary whitespace-pre-wrap break-words border border-transparent hover:border-gray-200 dark:hover:border-dark-border-subtle transition-colors duration-200"
+                className={`hover:bg-white dark:hover:bg-dark-bg-card px-2 py-1 rounded whitespace-pre-wrap break-words border border-transparent hover:border-gray-200 dark:hover:border-dark-border-subtle transition-colors duration-200 ${getLogLevelColor(log)}`}
               >
                 {log}
               </div>
