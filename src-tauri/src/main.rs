@@ -33,11 +33,11 @@ async fn main() {
         .setup(|app| {
             // 构建并设置应用菜单
             let app_handle = app.handle();
-            let menu = menu::build_menu(&app_handle);
+            let menu = menu::build_menu(app_handle);
             app.set_menu(menu)?;
 
             // 设置系统托盘
-            menu::setup_tray(&app_handle)?;
+            menu::setup_tray(app_handle)?;
 
             // 监听菜单事件
             let app_handle = app.handle().clone();

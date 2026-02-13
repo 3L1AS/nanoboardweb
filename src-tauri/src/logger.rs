@@ -84,7 +84,7 @@ pub async fn get_logs(lines: Option<usize>) -> Result<serde_json::Value, String>
 
     let reader = BufReader::new(file);
     let logs: Vec<String> = reader.lines()
-        .filter_map(|line| line.ok())
+        .map_while(Result::ok)
         .collect();
 
     // 只返回最后N行
@@ -128,10 +128,8 @@ fn read_new_lines(log_path: &PathBuf, last_pos: &mut u64) -> Result<Vec<String>,
     let reader = BufReader::new(file);
     let mut new_lines = Vec::new();
 
-    for line in reader.lines() {
-        if let Ok(log_line) = line {
-            new_lines.push(log_line);
-        }
+    for log_line in reader.lines().map_while(Result::ok) {
+        new_lines.push(log_line);
     }
 
     // 更新位置为当前文件大小
@@ -324,7 +322,7 @@ pub async fn get_log_statistics() -> Result<serde_json::Value, String> {
 
     let reader = BufReader::new(file);
     let logs: Vec<String> = reader.lines()
-        .filter_map(|line| line.ok())
+        .map_while(Result::ok)
         .collect();
 
     let mut debug = 0usize;

@@ -85,7 +85,7 @@ fn get_user_path() -> Vec<String> {
     let mut paths = Vec::new();
 
     // 获取当前用户主目录
-    if let Some(home) = env::var("HOME").ok() {
+    if let Ok(home) = env::var("HOME") {
         // 优先添加 conda/miniconda 路径（因为这些通常不在 PATH 中）
         paths.push(format!("{}/miniconda3/bin", home));
         paths.push(format!("{}/miniconda3/condabin", home));
@@ -111,7 +111,7 @@ fn get_user_path() -> Vec<String> {
                     // 只处理简单的 export PATH= 语句
                     if line.starts_with("export PATH=") {
                         if let Some(path_value) = line.split('=').nth(1) {
-                            let path_value = path_value.trim().replace('"', "").replace('\'', "");
+                            let path_value = path_value.trim().replace(['"', '\''], "");
                             for path in path_value.split(':') {
                                 if !path.is_empty() && !paths.contains(&path.to_string()) {
                                     paths.push(path.to_string());
@@ -186,7 +186,7 @@ fn find_command_pip() -> Option<String> {
     }
 
     // 方法 2: 在常见路径中查找
-    if let Some(home) = env::var("HOME").ok() {
+    if let Ok(home) = env::var("HOME") {
         for pip_name in &["pip3", "pip"] {
             for bin_dir in &[
                 format!("{}/miniconda3/bin", home),
@@ -211,7 +211,7 @@ fn find_via_pip(package: &str) -> Option<String> {
     let pip_cmd = find_command_pip().unwrap_or_else(|| "pip3".to_string());
 
     let output = Command::new(&pip_cmd)
-        .args(&["show", package])
+        .args(["show", package])
         .output()
         .ok()?;
 
@@ -349,7 +349,7 @@ fn check_nanobot_running_impl() -> bool {
     let mut sys = System::new_all();
     sys.refresh_all();
 
-    for (_pid, process) in sys.processes() {
+    for process in sys.processes().values() {
         let name = process.name();
         if name.contains("python") || name.contains("nanobot") {
             // 检查命令行参数
@@ -417,7 +417,7 @@ pub async fn start_nanobot(port: Option<u16>, state: State<'_, AppState>) -> Res
 
     // 先用测试模式运行来捕获错误信息
     let test_output = apply_hidden_window(Command::new(&nanobot_cmd))
-        .args(&["--help"])
+        .args(["--help"])
         .env("PYTHONUTF8", "1")
         .env("PYTHONIOENCODING", "utf-8")
         .output();
@@ -449,7 +449,7 @@ pub async fn start_nanobot(port: Option<u16>, state: State<'_, AppState>) -> Res
 
     // 启动 nanobot gateway，先捕获 stderr 以便调试
     let mut child = match apply_hidden_window(Command::new(&nanobot_cmd))
-        .args(&["gateway", "--port", &port.to_string()])
+        .args(["gateway", "--port", &port.to_string()])
         .env("PYTHONUTF8", "1")
         .env("PYTHONIOENCODING", "utf-8")
         .stdout(Stdio::from(log_file.try_clone().unwrap()))
@@ -505,7 +505,7 @@ pub async fn start_nanobot(port: Option<u16>, state: State<'_, AppState>) -> Res
 
     // 真正启动 nanobot，将所有输出都重定向到日志文件
     let mut child = match apply_hidden_window(Command::new(&nanobot_cmd))
-        .args(&["gateway", "--port", &port.to_string()])
+        .args(["gateway", "--port", &port.to_string()])
         .env("PYTHONUTF8", "1")
         .env("PYTHONIOENCODING", "utf-8")
         .stdout(Stdio::from(log_file.try_clone().unwrap()))
@@ -716,7 +716,7 @@ fn detect_nanobot_port() -> Option<u16> {
     let mut sys = System::new_all();
     sys.refresh_all();
 
-    for (_pid, process) in sys.processes() {
+    for process in sys.processes().values() {
         let name = process.name();
         if name.contains("python") || name.contains("nanobot") {
             let cmd = process.cmd();
@@ -746,7 +746,7 @@ fn get_nanobot_start_time() -> Option<i64> {
     let mut sys = System::new_all();
     sys.refresh_all();
 
-    for (_pid, process) in sys.processes() {
+    for process in sys.processes().values() {
         let name = process.name();
         if name.contains("python") || name.contains("nanobot") {
             let cmd = process.cmd();
@@ -773,7 +773,7 @@ pub async fn download_nanobot() -> Result<serde_json::Value, String> {
     // 步骤 1: 检查并升级 pip
     log::info!("检查 pip 版本...");
     let upgrade_output = apply_hidden_window(Command::new(&pip_cmd))
-        .args(&["install", "--upgrade", "pip"])
+        .args(["install", "--upgrade", "pip"])
         .output();
 
     if let Ok(upgrade_out) = upgrade_output {
@@ -785,7 +785,7 @@ pub async fn download_nanobot() -> Result<serde_json::Value, String> {
     }
 
     // 步骤 2: 尝试多种方式安装 nanobot-ai
-    let install_methods = vec![
+    let install_methods = [
         // 方法 1: 使用官方 PyPI 源
         vec!["install", "--index-url", "https://pypi.org/simple", "nanobot-ai"],
         // 方法 2: 使用清华镜像源（国内更快）
@@ -867,7 +867,7 @@ pub async fn download_nanobot_with_uv() -> Result<serde_json::Value, String> {
 
     // 使用 uv tool install 安装（更快更可靠）
     let output = apply_hidden_window(Command::new(&uv_cmd))
-        .args(&["tool", "install", "nanobot-ai"])
+        .args(["tool", "install", "nanobot-ai"])
         .output()
         .context("执行 uv install 失败")
         .map_err(|e| e.to_string())?;
@@ -936,7 +936,7 @@ pub async fn onboard_nanobot() -> Result<serde_json::Value, String> {
             .unwrap();
 
         Command::new(&nanobot_cmd)
-            .args(&["onboard"])
+            .args(["onboard"])
             .env("PYTHONIOENCODING", "utf-8")
             .output()
             .context("执行 nanobot onboard 失败")
@@ -1273,7 +1273,7 @@ fn parse_python_version(version_str: &str) -> Option<(u32, u32, u32)> {
     // 提取版本号，格式如 "Python 3.11.0" 或 "Python 3.12"
     let version_part = version_str
         .strip_prefix("Python ")
-        .or_else(|| Some(version_str))
+        .or(Some(version_str))
         .unwrap_or(version_str);
 
     let parts: Vec<&str> = version_part.split('.').collect();
@@ -1501,17 +1501,19 @@ fn check_nanobot_dependencies() -> DiagnosticCheck {
     let mut missing_deps = Vec::new();
 
     // 检查 fastapi
-    if let Err(_) = Command::new("python")
-        .args(&["-c", "import fastapi"])
+    if Command::new("python")
+        .args(["-c", "import fastapi"])
         .output()
+        .is_err()
     {
         missing_deps.push("fastapi");
     }
 
     // 检查 openai
-    if let Err(_) = Command::new("python")
-        .args(&["-c", "import openai"])
+    if Command::new("python")
+        .args(["-c", "import openai"])
         .output()
+        .is_err()
     {
         missing_deps.push("openai");
     }

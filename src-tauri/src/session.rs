@@ -486,7 +486,7 @@ pub async fn get_directory_tree(relative_path: Option<String>) -> Result<serde_j
         "success": true,
         "path": relative_path.clone().unwrap_or("/".to_string()),
         "items": items,
-        "parent": if relative_path.as_ref().map_or(true, |p| p == "/" || p.is_empty()) {
+        "parent": if relative_path.as_ref().is_none_or(|p| p == "/" || p.is_empty()) {
             None
         } else {
             relative_path

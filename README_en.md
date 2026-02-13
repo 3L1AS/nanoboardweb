@@ -181,7 +181,7 @@ nanoboard/
 - [x] Enhanced config validation and error hints
 - [x] Multi-language support (i18n)
 - [x] Performance monitoring charts
-- [ ] Dark theme
+- [x] Dark theme
 - [ ] Auto-update feature
 
 ## Acknowledgments

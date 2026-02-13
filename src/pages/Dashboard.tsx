@@ -193,7 +193,7 @@ export default function Dashboard() {
   async function loadNanobotPath() {
     try {
       const result = await processApi.getNanobotPath();
-      if (result.found) {
+      if (result.found && result.path) {
         setNanobotPath(result.path);
       }
     } catch (error) {

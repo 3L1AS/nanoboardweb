@@ -480,7 +480,7 @@ export default function ConfigEditor() {
       setCodeError(null);
 
       const validation = await configApi.validate(parsed);
-      if (!validation.valid && validation.errors.length > 0) {
+      if (!validation.valid && validation.errors && validation.errors.length > 0) {
         toast.showError(`${t("config.validationFailed")}: ${validation.errors.join(", ")}`);
         return;
       }

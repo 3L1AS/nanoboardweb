@@ -10,6 +10,7 @@ import ConfigEditor from "./pages/ConfigEditor";
 import Logs from "./pages/Logs";
 import Sessions from "./pages/Sessions";
 import { ContextMenu } from "./components/ContextMenu";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 function AppContent() {
   const navigate = useNavigate();
@@ -84,13 +85,15 @@ function AppContent() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <ThemeProvider>
-        <ToastProvider>
-          <AppContent />
-        </ToastProvider>
-      </ThemeProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <AppContent />
+          </ToastProvider>
+        </ThemeProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 
