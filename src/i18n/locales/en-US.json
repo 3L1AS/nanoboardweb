@@ -510,6 +510,13 @@
     "title": "No Data",
     "description": "No content to display"
   },
+  "errorBoundary": {
+    "title": "Error",
+    "description": "The application encountered an error. Please try refreshing the page or restarting the app.",
+    "viewStack": "View Component Stack",
+    "retry": "Retry",
+    "reload": "Refresh Page"
+  },
   "confirmDialog": {
     "confirm": "Confirm",
     "cancel": "Cancel",
@@ -640,6 +647,8 @@
     "runJob": "Run Now",
     "runSuccess": "Job triggered successfully",
     "runFailed": "Failed to run job",
+    "oldJobRestored": "Old job restored",
+    "oldJobRestoreFailed": "Failed to restore old job",
     "cancel": "Cancel",
     "confirm": "Add",
     "adding": "Adding...",

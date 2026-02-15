@@ -86,34 +86,8 @@ export default function Logs() {
         toggleStream();
       }, 500);
     } else {
-      // 检查之前是否正在监控
-      const wasStreaming = localStorage.getItem("logStreaming") === "true";
-      if (wasStreaming) {
-        // 重新启动监控（包括后端 watcher 和前端事件监听）
-        setTimeout(async () => {
-          try {
-            // 首先重新启动后端 watcher
-            await loggerApi.startStream();
-
-            // 监听日志更新 - 只负责添加日志，不应用过滤
-            const unlisten = await events.onLogUpdate((newLogs) => {
-              setLogs((prev) => {
-                const updated = [...prev, ...newLogs];
-                return updated;
-              });
-            });
-
-            // 使用 useRef 存储取消监听函数
-            unlistenRef.current = unlisten;
-            setStreaming(true);
-          } catch (error) {
-            console.error("恢复监控失败:", error);
-            // 如果恢复失败，清除状态
-            localStorage.setItem("logStreaming", "false");
-            setStreaming(false);
-          }
-        }, 100);
-      }
+      // 同步后端和前端的流状态
+      syncStreamState();
     }
 
     // 组件卸载时清理事件监听器
@@ -128,6 +102,73 @@ export default function Logs() {
       }
     };
   }, []);
+
+  // 同步后端和前端的流状态
+  async function syncStreamState() {
+    try {
+      // 检查后端实际状态
+      const isBackendRunning = await loggerApi.isStreamRunning();
+      const wasStreaming = localStorage.getItem("logStreaming") === "true";
+
+      if (wasStreaming && !isBackendRunning) {
+        // 前端认为在运行但后端已停止，需要重新启动
+        setTimeout(async () => {
+          try {
+            await loggerApi.startStream();
+
+            const unlisten = await events.onLogUpdate((newLogs) => {
+              setLogs((prev) => [...prev, ...newLogs]);
+            });
+
+            unlistenRef.current = unlisten;
+            setStreaming(true);
+          } catch (error) {
+            console.error("恢复监控失败:", error);
+            localStorage.setItem("logStreaming", "false");
+            setStreaming(false);
+          }
+        }, 100);
+      } else if (!wasStreaming && isBackendRunning) {
+        // 前端认为停止但后端在运行，以后端状态为准
+        // 需要设置前端监听器
+        setTimeout(async () => {
+          try {
+            const unlisten = await events.onLogUpdate((newLogs) => {
+              setLogs((prev) => [...prev, ...newLogs]);
+            });
+
+            unlistenRef.current = unlisten;
+            setStreaming(true);
+            localStorage.setItem("logStreaming", "true");
+          } catch (error) {
+            console.error("设置监听失败:", error);
+          }
+        }, 100);
+      } else if (wasStreaming && isBackendRunning) {
+        // 两边都认为在运行，只需设置前端监听器
+        setTimeout(async () => {
+          try {
+            const unlisten = await events.onLogUpdate((newLogs) => {
+              setLogs((prev) => [...prev, ...newLogs]);
+            });
+
+            unlistenRef.current = unlisten;
+            setStreaming(true);
+          } catch (error) {
+            console.error("设置监听失败:", error);
+            setStreaming(false);
+            localStorage.setItem("logStreaming", "false");
+          }
+        }, 100);
+      }
+      // 如果两边都认为停止，不需要做任何事
+    } catch (error) {
+      console.error("检查后端状态失败:", error);
+      // 如果无法获取后端状态，清除前端状态避免不一致
+      setStreaming(false);
+      localStorage.setItem("logStreaming", "false");
+    }
+  }
 
   // 应用过滤 - 当日志、搜索条件或级别改变时重新过滤
   useEffect(() => {

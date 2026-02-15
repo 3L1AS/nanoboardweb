@@ -32,6 +32,7 @@ export default function Memory() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [pendingMemory, setPendingMemory] = useState<MemoryType | null>(null);
 
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>({
     isOpen: false,
@@ -62,12 +63,25 @@ export default function Memory() {
 
   async function selectMemory(memory: MemoryType) {
     if (isEditing && editingContent !== memoryContent) {
-      // 提示保存更改
-      if (!window.confirm(t("memory.unsavedChanges"))) {
-        return;
-      }
+      // 使用 ConfirmDialog 替代 window.confirm
+      setPendingMemory(memory);
+      setConfirmDialog({
+        isOpen: true,
+        title: t("memory.unsavedChanges"),
+        message: t("memory.unsavedChanges"),
+        onConfirm: async () => {
+          setConfirmDialog({ isOpen: false, title: "", message: "", onConfirm: () => {} });
+          setPendingMemory(null);
+          await loadSelectedMemory(memory);
+        },
+      });
+      return;
     }
 
+    await loadSelectedMemory(memory);
+  }
+
+  async function loadSelectedMemory(memory: MemoryType) {
     setSelectedMemory(memory);
     setIsEditing(false);
 

@@ -60,6 +60,7 @@ export const loggerApi = {
   getStatistics: () => invoke<AnyResponse>("get_log_statistics"),
   startStream: () => invoke<void>("start_log_stream"),
   stopStream: () => invoke<void>("stop_log_stream"),
+  isStreamRunning: () => invoke<boolean>("is_log_stream_running"),
 };
 
 // Network API

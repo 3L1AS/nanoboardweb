@@ -519,6 +519,13 @@
     "title": "暂无数据",
     "description": "没有可显示的内容"
   },
+  "errorBoundary": {
+    "title": "出错了",
+    "description": "应用程序遇到了一个错误。请尝试刷新页面或重启应用。",
+    "viewStack": "查看组件堆栈",
+    "retry": "重试",
+    "reload": "刷新页面"
+  },
   "confirmDialog": {
     "confirm": "确定",
     "cancel": "取消",
@@ -639,6 +646,8 @@
     "runJob": "手动执行",
     "runSuccess": "任务已触发执行",
     "runFailed": "执行任务失败",
+    "oldJobRestored": "旧任务已恢复",
+    "oldJobRestoreFailed": "旧任务恢复失败",
     "cancel": "取消",
     "confirm": "添加",
     "adding": "添加中...",

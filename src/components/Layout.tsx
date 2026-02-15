@@ -65,7 +65,21 @@ export default function Layout({ children }: LayoutProps) {
     loadStatus();
     // 定时刷新状态（每2秒）
     const interval = setInterval(loadStatus, 2000);
-    return () => clearInterval(interval);
+
+    // 页面可见性变化时处理轮询
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // 页面重新可见时，立即刷新状态
+        loadStatus();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   async function loadStatus() {

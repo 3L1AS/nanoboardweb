@@ -2,13 +2,59 @@ use anyhow::{Context, Result};
 use dirs::home_dir;
 use serde_json::json;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// 获取workspace路径
 fn get_workspace_path() -> Result<PathBuf> {
     let home = home_dir().context("无法找到用户主目录")?;
     let workspace_path = home.join(".nanobot").join("workspace");
     Ok(workspace_path)
+}
+
+/// 安全地验证路径是否在 workspace 内，返回规范化的路径
+/// 此函数减少了 TOCTOU 漏洞风险，因为验证后的路径直接用于后续操作
+fn validate_and_canonicalize_path(relative_path: &str, workspace_path: &Path) -> Result<PathBuf, String> {
+    // 清理路径，移除开头的 /
+    let clean_path = relative_path.trim_start_matches('/');
+    let target_path = workspace_path.join(clean_path);
+
+    // 获取规范化路径
+    let canonical_workspace = fs::canonicalize(workspace_path)
+        .map_err(|e| format!("获取workspace路径失败: {}", e))?;
+
+    // 如果目标路径不存在，检查父目录
+    let canonical_target = if target_path.exists() {
+        fs::canonicalize(&target_path)
+            .map_err(|e| format!("获取目标路径失败: {}", e))?
+    } else {
+        // 对于不存在的路径，规范化父目录并附加文件名
+        let parent = target_path.parent()
+            .ok_or_else(|| "无法获取父目录".to_string())?;
+
+        if parent.exists() {
+            let canonical_parent = fs::canonicalize(parent)
+                .map_err(|e| format!("获取父目录路径失败: {}", e))?;
+
+            if !canonical_parent.starts_with(&canonical_workspace) {
+                return Err("访问被拒绝：路径超出workspace范围".to_string());
+            }
+
+            // 返回完整的规范化路径（父目录 + 文件名）
+            if let Some(file_name) = target_path.file_name() {
+                return Ok(canonical_parent.join(file_name));
+            }
+            return Err("无效的文件名".to_string());
+        } else {
+            return Err("父目录不存在".to_string());
+        }
+    };
+
+    // 验证路径在 workspace 内
+    if !canonical_target.starts_with(&canonical_workspace) {
+        return Err("访问被拒绝：路径超出workspace范围".to_string());
+    }
+
+    Ok(canonical_target)
 }
 
 /// 列出所有会话
@@ -537,14 +583,21 @@ pub async fn get_directory_tree(relative_path: Option<String>) -> Result<serde_j
             .map_err(|e| format!("创建workspace目录失败: {}", e))?;
     }
 
-    // 解析相对路径
-    let target_path = if let Some(rel_path) = &relative_path {
+    // 解析相对路径并验证安全性
+    let target_path = if let Some(ref rel_path) = relative_path {
         if rel_path.is_empty() || rel_path == "/" {
             workspace_path.clone()
         } else {
-            // 清理路径，移除开头的 /
-            let clean_path = rel_path.trim_start_matches('/');
-            workspace_path.join(clean_path)
+            // 使用安全验证函数
+            match validate_and_canonicalize_path(rel_path, &workspace_path) {
+                Ok(path) => path,
+                Err(e) => {
+                    return Ok(json!({
+                        "success": false,
+                        "message": e
+                    }));
+                }
+            }
         }
     } else {
         workspace_path.clone()
@@ -555,19 +608,6 @@ pub async fn get_directory_tree(relative_path: Option<String>) -> Result<serde_j
         return Ok(json!({
             "success": false,
             "message": format!("路径 {} 不存在", relative_path.unwrap_or_default())
-        }));
-    }
-
-    // 检查路径是否在 workspace 内（安全检查）
-    let canonical_workspace = fs::canonicalize(&workspace_path)
-        .map_err(|e| format!("获取workspace路径失败: {}", e))?;
-    let canonical_target = fs::canonicalize(&target_path)
-        .map_err(|e| format!("获取目标路径失败: {}", e))?;
-
-    if !canonical_target.starts_with(&canonical_workspace) {
-        return Ok(json!({
-            "success": false,
-            "message": "访问被拒绝：路径超出workspace范围"
         }));
     }
 
@@ -658,21 +698,16 @@ pub async fn get_directory_tree(relative_path: Option<String>) -> Result<serde_j
 pub async fn get_file_content(relative_path: String) -> Result<serde_json::Value, String> {
     let workspace_path = get_workspace_path().map_err(|e| e.to_string())?;
 
-    let clean_path = relative_path.trim_start_matches('/');
-    let file_path = workspace_path.join(clean_path);
-
-    // 安全检查
-    let canonical_workspace = fs::canonicalize(&workspace_path)
-        .map_err(|e| format!("获取workspace路径失败: {}", e))?;
-    let canonical_file = fs::canonicalize(&file_path)
-        .map_err(|e| format!("获取文件路径失败: {}", e))?;
-
-    if !canonical_file.starts_with(&canonical_workspace) {
-        return Ok(json!({
-            "success": false,
-            "message": "访问被拒绝：路径超出workspace范围"
-        }));
-    }
+    // 使用安全验证函数
+    let file_path = match validate_and_canonicalize_path(&relative_path, &workspace_path) {
+        Ok(path) => path,
+        Err(e) => {
+            return Ok(json!({
+                "success": false,
+                "message": e
+            }));
+        }
+    };
 
     if !file_path.exists() {
         return Ok(json!({
@@ -713,27 +748,23 @@ pub async fn get_file_content(relative_path: String) -> Result<serde_json::Value
 pub async fn create_folder(relative_path: String, folder_name: String) -> Result<serde_json::Value, String> {
     let workspace_path = get_workspace_path().map_err(|e| e.to_string())?;
 
-    let clean_path = relative_path.trim_start_matches('/');
-    let parent_path = if clean_path.is_empty() || clean_path == "/" {
+    // 解析父目录路径
+    let parent_path = if relative_path.is_empty() || relative_path == "/" {
         workspace_path.clone()
     } else {
-        workspace_path.join(clean_path)
+        // 使用安全验证函数
+        match validate_and_canonicalize_path(&relative_path, &workspace_path) {
+            Ok(path) => path,
+            Err(e) => {
+                return Ok(json!({
+                    "success": false,
+                    "message": e
+                }));
+            }
+        }
     };
 
     let new_folder_path = parent_path.join(&folder_name);
-
-    // 安全检查
-    let canonical_workspace = fs::canonicalize(&workspace_path)
-        .map_err(|e| format!("获取workspace路径失败: {}", e))?;
-    let canonical_parent = fs::canonicalize(&parent_path)
-        .map_err(|e| format!("获取父目录路径失败: {}", e))?;
-
-    if !canonical_parent.starts_with(&canonical_workspace) {
-        return Ok(json!({
-            "success": false,
-            "message": "访问被拒绝：路径超出workspace范围"
-        }));
-    }
 
     if new_folder_path.exists() {
         return Ok(json!({
@@ -761,8 +792,16 @@ pub async fn create_folder(relative_path: String, folder_name: String) -> Result
 pub async fn delete_folder(relative_path: String) -> Result<serde_json::Value, String> {
     let workspace_path = get_workspace_path().map_err(|e| e.to_string())?;
 
-    let clean_path = relative_path.trim_start_matches('/');
-    let folder_path = workspace_path.join(clean_path);
+    // 使用安全验证函数
+    let folder_path = match validate_and_canonicalize_path(&relative_path, &workspace_path) {
+        Ok(path) => path,
+        Err(e) => {
+            return Ok(json!({
+                "success": false,
+                "message": e
+            }));
+        }
+    };
 
     // 获取文件夹名称
     let folder_name = folder_path.file_name()
@@ -778,24 +817,10 @@ pub async fn delete_folder(relative_path: String) -> Result<serde_json::Value, S
         }));
     }
 
-    // 安全检查
-    let canonical_workspace = fs::canonicalize(&workspace_path)
-        .map_err(|e| format!("获取workspace路径失败: {}", e))?;
-
     if !folder_path.exists() {
         return Ok(json!({
             "success": false,
             "message": format!("文件夹 {} 不存在", relative_path)
-        }));
-    }
-
-    let canonical_folder = fs::canonicalize(&folder_path)
-        .map_err(|e| format!("获取文件夹路径失败: {}", e))?;
-
-    if !canonical_folder.starts_with(&canonical_workspace) {
-        return Ok(json!({
-            "success": false,
-            "message": "访问被拒绝：路径超出workspace范围"
         }));
     }
 
@@ -821,8 +846,16 @@ pub async fn delete_folder(relative_path: String) -> Result<serde_json::Value, S
 pub async fn rename_item(relative_path: String, new_name: String) -> Result<serde_json::Value, String> {
     let workspace_path = get_workspace_path().map_err(|e| e.to_string())?;
 
-    let clean_path = relative_path.trim_start_matches('/');
-    let item_path = workspace_path.join(clean_path);
+    // 使用安全验证函数
+    let item_path = match validate_and_canonicalize_path(&relative_path, &workspace_path) {
+        Ok(path) => path,
+        Err(e) => {
+            return Ok(json!({
+                "success": false,
+                "message": e
+            }));
+        }
+    };
 
     // 获取项目名称
     let item_name = item_path.file_name()
@@ -840,24 +873,10 @@ pub async fn rename_item(relative_path: String, new_name: String) -> Result<serd
         }));
     }
 
-    // 安全检查
-    let canonical_workspace = fs::canonicalize(&workspace_path)
-        .map_err(|e| format!("获取workspace路径失败: {}", e))?;
-
     if !item_path.exists() {
         return Ok(json!({
             "success": false,
             "message": format!("{} 不存在", relative_path)
-        }));
-    }
-
-    let canonical_item = fs::canonicalize(&item_path)
-        .map_err(|e| format!("获取路径失败: {}", e))?;
-
-    if !canonical_item.starts_with(&canonical_workspace) {
-        return Ok(json!({
-            "success": false,
-            "message": "访问被拒绝：路径超出workspace范围"
         }));
     }
 
@@ -891,8 +910,16 @@ pub async fn rename_item(relative_path: String, new_name: String) -> Result<serd
 pub async fn delete_file(relative_path: String) -> Result<serde_json::Value, String> {
     let workspace_path = get_workspace_path().map_err(|e| e.to_string())?;
 
-    let clean_path = relative_path.trim_start_matches('/');
-    let file_path = workspace_path.join(clean_path);
+    // 使用安全验证函数
+    let file_path = match validate_and_canonicalize_path(&relative_path, &workspace_path) {
+        Ok(path) => path,
+        Err(e) => {
+            return Ok(json!({
+                "success": false,
+                "message": e
+            }));
+        }
+    };
 
     // 获取文件名
     let file_name = file_path.file_name()
@@ -908,24 +935,11 @@ pub async fn delete_file(relative_path: String) -> Result<serde_json::Value, Str
         }));
     }
 
-    // 安全检查
-    let canonical_workspace = fs::canonicalize(&workspace_path)
-        .unwrap_or_else(|_| workspace_path.clone());
-
     if !file_path.exists() {
         return Ok(json!({
             "success": false,
             "message": format!("文件 {} 不存在", relative_path)
         }));
-    }
-
-    if let Ok(canonical_file) = fs::canonicalize(&file_path) {
-        if !canonical_file.starts_with(&canonical_workspace) {
-            return Ok(json!({
-                "success": false,
-                "message": "访问被拒绝：路径超出workspace范围"
-            }));
-        }
     }
 
     if !file_path.is_file() {

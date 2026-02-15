@@ -106,6 +106,14 @@ export default function CronJobs() {
     }
 
     setIsSubmitting(true);
+
+    // 保存旧任务信息，以便在添加失败时恢复
+    const oldJobBackup = editingJob ? {
+      name: editingJob.name || "",
+      message: editingJob.message || "",
+      schedule: editingJob.schedule || "",
+    } : null;
+
     try {
       // 编辑模式：先删除旧任务
       if (editingJob) {
@@ -129,7 +137,22 @@ export default function CronJobs() {
         resetForm();
         await loadJobs();
       } else {
-        toast.showError(result.message || t("cron.addFailed"));
+        // 添加失败，尝试恢复旧任务
+        if (oldJobBackup && editingJob) {
+          try {
+            await cronApi.add(
+              oldJobBackup.name,
+              oldJobBackup.message,
+              "cron", // 使用默认类型
+              oldJobBackup.schedule,
+            );
+            toast.showError(t("cron.addFailed") + " - " + t("cron.oldJobRestored"));
+          } catch {
+            toast.showError(t("cron.addFailed") + " - " + t("cron.oldJobRestoreFailed"));
+          }
+        } else {
+          toast.showError(result.message || t("cron.addFailed"));
+        }
       }
     } catch (error) {
       toast.showError(t("cron.addFailed"));

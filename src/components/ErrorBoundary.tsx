@@ -1,5 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
+import i18n from "../i18n";
 
 interface Props {
   children: ReactNode;
@@ -50,11 +51,11 @@ class ErrorBoundary extends Component<Props, State> {
             </div>
 
             <h1 className="text-xl font-semibold text-center text-gray-900 dark:text-white mb-2">
-              出错了
+              {i18n.t("errorBoundary.title")}
             </h1>
 
             <p className="text-gray-600 dark:text-gray-400 text-center mb-4">
-              应用程序遇到了一个错误。请尝试刷新页面或重启应用。
+              {i18n.t("errorBoundary.description")}
             </p>
 
             {import.meta.env.DEV && this.state.error && (
@@ -65,7 +66,7 @@ class ErrorBoundary extends Component<Props, State> {
                 {this.state.errorInfo && (
                   <details className="mt-2">
                     <summary className="text-sm text-red-600 dark:text-red-400 cursor-pointer">
-                      查看组件堆栈
+                      {i18n.t("errorBoundary.viewStack")}
                     </summary>
                     <pre className="mt-2 text-xs text-red-700 dark:text-red-300 whitespace-pre-wrap overflow-auto max-h-40">
                       {this.state.errorInfo.componentStack}
@@ -80,14 +81,14 @@ class ErrorBoundary extends Component<Props, State> {
                 onClick={this.handleReset}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
               >
-                重试
+                {i18n.t("errorBoundary.retry")}
               </button>
               <button
                 onClick={this.handleReload}
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
               >
                 <RefreshCw className="w-4 h-4" />
-                刷新页面
+                {i18n.t("errorBoundary.reload")}
               </button>
             </div>
           </div>

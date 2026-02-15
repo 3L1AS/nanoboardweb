@@ -134,10 +134,10 @@ pub async fn save_config(config: JsonValue) -> Result<(), String> {
     let config_path = get_config_path_internal().map_err(|e| e.to_string())?;
 
     // 在保存前创建历史备份
+    // 如果备份失败，阻止保存以保护用户配置
     if config_path.exists() {
-        if let Err(e) = create_history_backup() {
-            eprintln!("创建配置备份失败: {}", e);
-        }
+        create_history_backup()
+            .map_err(|e| format!("创建配置备份失败，保存已取消: {}", e))?;
     }
 
     // 确保目录存在

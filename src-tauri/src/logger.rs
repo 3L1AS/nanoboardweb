@@ -364,3 +364,11 @@ pub fn get_log_statistics_internal() -> Result<serde_json::Value, String> {
 pub async fn get_log_statistics() -> Result<serde_json::Value, String> {
     get_log_statistics_internal()
 }
+
+/// 检查日志流是否正在运行
+#[tauri::command]
+pub async fn is_log_stream_running(
+    watcher_handle: tauri::State<'_, Arc<WatcherHandle>>,
+) -> Result<bool, String> {
+    Ok(watcher_handle.is_running())
+}

@@ -77,6 +77,7 @@ async fn main() {
             logger::get_log_statistics,
             logger::start_log_stream,
             logger::stop_log_stream,
+            logger::is_log_stream_running,
             // Network commands
             network::init_network_monitor,
             network::get_network_stats,

@@ -32,7 +32,8 @@ export function ToastProvider({ children }: ToastProviderProps) {
 
   const showToast = useCallback(
     (message: string, type: ToastType = "info", duration: number = 3000) => {
-      const id = Math.random().toString(36).substring(7);
+      // 使用时间戳 + 随机字符串生成更可靠的唯一 ID
+      const id = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
       const newToast: Toast = { id, type, message, duration };
       setToasts((prev) => [...prev, newToast]);
     },
