@@ -7,6 +7,7 @@ export interface Provider {
   name: string;
   apiKey?: string;
   apiBase?: string;
+  token?: string;  // OAuth provider 使用
   default_model?: string;  // 仅用于 UI 辅助，不保存到配置
   models?: string[];       // 仅用于 UI 辅助，不保存到配置
 }
@@ -132,6 +133,10 @@ export interface ProviderInfo {
   apiUrl: string;
   defaultModel: string;
   models: string[];
+  // 认证类型：api_key 或 oauth
+  authType?: "api_key" | "oauth";
+  // OAuth 登录命令（如 "github-copilot", "openai-codex"）
+  loginCommand?: string;
 }
 
 // Channel 配置信息

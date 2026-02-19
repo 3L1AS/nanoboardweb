@@ -1162,6 +1162,102 @@ pub async fn get_nanobot_path() -> Result<serde_json::Value, String> {
     }
 }
 
+/// OAuth Provider 登录
+/// 通过打开终端运行 nanobot provider login 命令
+#[tauri::command]
+pub async fn provider_login(provider: String) -> Result<serde_json::Value, String> {
+    let nanobot_cmd = match find_command("nanobot") {
+        Some(cmd) => cmd,
+        None => {
+            return Ok(json!({
+                "success": false,
+                "message": "未找到 nanobot 命令，请先安装 nanobot"
+            }));
+        }
+    };
+
+    // 构建登录命令
+    let login_command = format!("{} provider login {}", nanobot_cmd, provider);
+    log::info!("执行 OAuth 登录: {}", login_command);
+
+    // 在 macOS 上使用 Terminal.app 打开终端
+    #[cfg(target_os = "macos")]
+    {
+        let script = format!(
+            r#"tell application "Terminal"
+                do script "{}"
+                activate
+            end tell"#,
+            login_command
+        );
+        match Command::new("osascript")
+            .args(["-e", &script])
+            .spawn()
+        {
+            Ok(_) => Ok(json!({
+                "success": true,
+                "message": "已在终端中打开登录流程，请在终端中完成授权"
+            })),
+            Err(e) => Ok(json!({
+                "success": false,
+                "message": format!("打开终端失败: {}", e)
+            })),
+        }
+    }
+
+    // 在 Linux 上尝试使用常见终端模拟器
+    #[cfg(target_os = "linux")]
+    {
+        let terminals = ["gnome-terminal", "konsole", "xterm", "alacritty", "kitty"];
+        let mut success = false;
+
+        for terminal in terminals {
+            let result = Command::new(terminal)
+                .args(["-e", &login_command])
+                .spawn();
+
+            if result.is_ok() {
+                success = true;
+                break;
+            }
+        }
+
+        if success {
+            Ok(json!({
+                "success": true,
+                "message": "已在终端中打开登录流程，请在终端中完成授权"
+            }))
+        } else {
+            Ok(json!({
+                "success": false,
+                "message": "无法打开终端，请手动运行: nanobot provider login {}".replace("{}", &provider)
+            }))
+        }
+    }
+
+    // 在 Windows 上使用 cmd
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NEW_CONSOLE: u32 = 0x00000010;
+
+        match Command::new("cmd")
+            .args(["/C", "start", "cmd", "/K", &login_command])
+            .creation_flags(CREATE_NEW_CONSOLE)
+            .spawn()
+        {
+            Ok(_) => Ok(json!({
+                "success": true,
+                "message": "已在命令提示符中打开登录流程，请在命令提示符中完成授权"
+            })),
+            Err(e) => Ok(json!({
+                "success": false,
+                "message": format!("打开命令提示符失败: {}", e)
+            })),
+        }
+    }
+}
+
 /// 诊断 nanobot 环境，帮助用户排查问题
 #[tauri::command]
 pub async fn diagnose_nanobot() -> Result<serde_json::Value, String> {

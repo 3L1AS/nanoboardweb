@@ -43,7 +43,7 @@ import type {
   Provider,
   McpServer,
 } from "@/config/types";
-import { AVAILABLE_PROVIDERS } from "@/config/providers";
+import { AVAILABLE_PROVIDERS, isProviderConfigured } from "@/config/providers";
 import { CHANNELS_CONFIG } from "@/config/channels";
 import { formatTimestamp } from "@/utils/format";
 import ProviderEditModal from "@/components/config/ProviderEditModal";
@@ -888,8 +888,7 @@ export default function ConfigEditor() {
                 <p className="text-sm text-gray-600 dark:text-dark-text-secondary mb-3">{t("config.selectProvider")}</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {AVAILABLE_PROVIDERS.map((provider) => {
-                    const providerConfig = config.providers?.[provider.id];
-                    const isConfigured = providerConfig && providerConfig.apiKey && providerConfig.apiKey.trim() !== "";
+                    const isConfigured = isProviderConfigured(config, provider.id);
                     const isCurrentProvider = selectedProviderId === provider.id;
 
                     return (

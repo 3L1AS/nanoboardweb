@@ -2,8 +2,9 @@
  * Provider 编辑模态框组件
  */
 
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Trash2 } from "lucide-react";
+import { Trash2, LogIn, ExternalLink } from "lucide-react";
 import {
   Bot,
   Brain,
@@ -15,6 +16,8 @@ import {
   Server,
 } from "lucide-react";
 import type { ProviderInfo, ProviderAgentConfig, Config } from "@/config/types";
+import { processApi } from "@/lib/tauri";
+import { useToast } from "@/contexts/ToastContext";
 
 // 图标映射组件
 const ProviderIcon = ({ name, className }: { name: string; className?: string }) => {
@@ -63,6 +66,31 @@ export default function ProviderEditModal({
   onUpdateProviderAgentConfig,
 }: ProviderEditModalProps) {
   const { t } = useTranslation();
+  const { showToast } = useToast();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // 检查是否为 OAuth Provider
+  const isOAuth = providerInfo?.authType === "oauth";
+  const hasToken = !!(config.providers?.[providerId]?.token);
+
+  // 处理 OAuth 登录
+  const handleOAuthLogin = async () => {
+    if (!providerInfo?.loginCommand) return;
+
+    setIsLoggingIn(true);
+    try {
+      const result = await processApi.providerLogin(providerInfo.loginCommand);
+      if (result.success) {
+        showToast(result.message || "登录流程已启动，请在终端中完成授权", "info");
+      } else {
+        showToast(result.message || "登录失败", "error");
+      }
+    } catch (error) {
+      showToast(`登录失败: ${error}`, "error");
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
 
   if (!isOpen || !providerInfo) return null;
 
@@ -117,41 +145,96 @@ export default function ProviderEditModal({
         <div className="flex-1 overflow-y-auto p-6">
           {activeTab === "api" ? (
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-gray-600 dark:text-dark-text-secondary mb-1">
-                  {t("config.apiKey")}
-                </label>
-                <input
-                  type="password"
-                  value={config.providers?.[providerId]?.apiKey || ""}
-                  onChange={(e) => onUpdateProvider(providerId, "apiKey", e.target.value)}
-                  placeholder={t("config.apiKeyPlaceholder")}
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted"
-                />
-                {providerInfo.apiUrl && (
-                  <p className="text-xs text-gray-400 dark:text-dark-text-muted mt-1">
-                    {t("config.getApiKeyAt", { url: providerInfo.apiUrl })}
-                  </p>
-                )}
-              </div>
+              {/* OAuth Provider 显示登录按钮 */}
+              {isOAuth ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-500/30">
+                    <div className="flex items-center gap-3 mb-3">
+                      <LogIn className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      <span className="font-medium text-blue-900 dark:text-blue-100">
+                        {t("config.oauthLogin")}
+                      </span>
+                    </div>
+                    <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
+                      {t("config.oauthLoginDesc")}
+                    </p>
+                    <button
+                      onClick={handleOAuthLogin}
+                      disabled={isLoggingIn}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium"
+                    >
+                      {isLoggingIn ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          {t("config.loggingIn")}
+                        </>
+                      ) : (
+                        <>
+                          <LogIn className="w-4 h-4" />
+                          {t("config.login")}
+                        </>
+                      )}
+                    </button>
+                    {hasToken && (
+                      <p className="mt-3 text-sm text-green-600 dark:text-green-400">
+                        {t("config.oauthLoggedIn")}
+                      </p>
+                    )}
+                  </div>
+                  {providerInfo.apiUrl && (
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-dark-text-muted">
+                      <ExternalLink className="w-4 h-4" />
+                      <a
+                        href={providerInfo.apiUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-blue-600 dark:hover:text-blue-400"
+                      >
+                        {providerInfo.apiUrl}
+                      </a>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* 普通 Provider 显示 API Key 输入框 */
+                <>
+                  <div>
+                    <label className="block text-sm text-gray-600 dark:text-dark-text-secondary mb-1">
+                      {t("config.apiKey")}
+                    </label>
+                    <input
+                      type="password"
+                      value={config.providers?.[providerId]?.apiKey || ""}
+                      onChange={(e) => onUpdateProvider(providerId, "apiKey", e.target.value)}
+                      placeholder={t("config.apiKeyPlaceholder")}
+                      className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted"
+                    />
+                    {providerInfo.apiUrl && (
+                      <p className="text-xs text-gray-400 dark:text-dark-text-muted mt-1">
+                        {t("config.getApiKeyAt", { url: providerInfo.apiUrl })}
+                      </p>
+                    )}
+                  </div>
 
-              <div>
-                <label className="block text-sm text-gray-600 dark:text-dark-text-secondary mb-1">
-                  {t("config.apiBaseUrl")}
-                </label>
-                <input
-                  type="text"
-                  value={config.providers?.[providerId]?.apiBase || ""}
-                  onChange={(e) => onUpdateProvider(providerId, "apiBase", e.target.value)}
-                  placeholder={t("config.apiBaseUrlPlaceholder")}
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted"
-                />
-                {providerInfo.apiBase && (
-                  <p className="text-xs text-gray-400 dark:text-dark-text-muted mt-1">
-                    {t("config.apiBaseUrlDefault", { url: providerInfo.apiBase })}
-                  </p>
-                )}
-              </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 dark:text-dark-text-secondary mb-1">
+                      {t("config.apiBaseUrl")}
+                    </label>
+                    <input
+                      type="text"
+                      value={config.providers?.[providerId]?.apiBase || ""}
+                      onChange={(e) => onUpdateProvider(providerId, "apiBase", e.target.value)}
+                      placeholder={t("config.apiBaseUrlPlaceholder")}
+                      className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted"
+                    />
+                    {providerInfo.apiBase && (
+                      <p className="text-xs text-gray-400 dark:text-dark-text-muted mt-1">
+                        {t("config.apiBaseUrlDefault", { url: providerInfo.apiBase })}
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             <div className="space-y-4">

@@ -165,14 +165,28 @@ export const AVAILABLE_PROVIDERS: ProviderInfo[] = [
     ],
   },
   {
-    id: "github",
-    nameKey: "providers.github",
+    id: "github_copilot",
+    nameKey: "providers.githubCopilot",
     icon: "Network",
     colorClass: "bg-slate-50 dark:bg-slate-900/30 text-slate-600 dark:text-slate-400",
     apiBase: "https://api.githubcopilot.com",
     apiUrl: "https://github.com/features/copilot",
     defaultModel: "gpt-4o",
     models: ["gpt-4o", "gpt-4-turbo", "claude-3.5-sonnet"],
+    authType: "oauth",
+    loginCommand: "github-copilot",
+  },
+  {
+    id: "openai_codex",
+    nameKey: "providers.openaiCodex",
+    icon: "Brain",
+    colorClass: "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400",
+    apiBase: "https://api.openai.com/v1",
+    apiUrl: "https://openai.com",
+    defaultModel: "codex",
+    models: ["codex"],
+    authType: "oauth",
+    loginCommand: "openai-codex",
   },
 ];
 
@@ -181,11 +195,25 @@ export function getProviderInfo(providerId: string): ProviderInfo | undefined {
   return AVAILABLE_PROVIDERS.find(p => p.id === providerId);
 }
 
+// 检查 Provider 是否需要 OAuth 登录
+export function isOAuthProvider(providerId: string): boolean {
+  const provider = getProviderInfo(providerId);
+  return provider?.authType === "oauth";
+}
+
 // 检查 Provider 是否已配置
 export function isProviderConfigured(
-  config: { providers?: Record<string, { apiKey?: string }> },
+  config: { providers?: Record<string, { apiKey?: string; token?: string }> },
   providerId: string
 ): boolean {
   const providerConfig = config.providers?.[providerId];
-  return !!providerConfig && !!providerConfig.apiKey && providerConfig.apiKey.trim() !== "";
+  if (!providerConfig) return false;
+
+  // OAuth provider 检查 token 字段
+  if (isOAuthProvider(providerId)) {
+    return !!providerConfig.token && providerConfig.token.trim() !== "";
+  }
+
+  // 普通 provider 检查 apiKey 字段
+  return !!providerConfig.apiKey && providerConfig.apiKey.trim() !== "";
 }

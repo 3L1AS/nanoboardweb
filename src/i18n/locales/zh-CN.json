@@ -376,7 +376,12 @@
     "restrictToWorkspace": "限制到工作区 (tools.restrictToWorkspace)",
     "restrictToWorkspaceDesc": "启用后，将限制所有 Agent 工具（Shell、文件读写、目录列表等）只能在工作区目录内操作，防止路径穿越和越权访问。",
     "restrictEnabled": "工作区限制已启用",
-    "restrictDisabled": "工作区限制已禁用"
+    "restrictDisabled": "工作区限制已禁用",
+    "oauthLogin": "OAuth 登录",
+    "oauthLoginDesc": "此 Provider 需要通过 OAuth 进行身份验证。点击登录按钮后，将在终端中打开授权流程。",
+    "login": "登录",
+    "loggingIn": "登录中...",
+    "oauthLoggedIn": "已登录"
   },
   "logs": {
     "title": "日志监控",
@@ -613,7 +618,8 @@
     "zhipu": "Zhipu",
     "vllm": "vLLM",
     "siliconflow": "SiliconFlow",
-    "github": "GitHub Copilot"
+    "githubCopilot": "GitHub Copilot",
+    "openaiCodex": "OpenAI Codex"
   },
   "mcp": {
     "title": "MCP 服务器",

@@ -367,7 +367,12 @@
     "restrictToWorkspace": "Restrict to Workspace (tools.restrictToWorkspace)",
     "restrictToWorkspaceDesc": "When enabled, restricts all agent tools (shell, file read/write/edit, list) to the workspace directory. Prevents path traversal and out-of-scope access.",
     "restrictEnabled": "Workspace restriction enabled",
-    "restrictDisabled": "Workspace restriction disabled"
+    "restrictDisabled": "Workspace restriction disabled",
+    "oauthLogin": "OAuth Login",
+    "oauthLoginDesc": "This provider requires OAuth authentication. Click the login button to start the authorization flow in a terminal.",
+    "login": "Login",
+    "loggingIn": "Logging in...",
+    "oauthLoggedIn": "Logged in"
   },
   "logs": {
     "title": "Log Monitor",
@@ -606,7 +611,8 @@
     "zhipu": "Zhipu",
     "vllm": "vLLM",
     "siliconflow": "SiliconFlow",
-    "github": "GitHub Copilot"
+    "githubCopilot": "GitHub Copilot",
+    "openaiCodex": "OpenAI Codex"
   },
   "mcp": {
     "title": "MCP Servers",
