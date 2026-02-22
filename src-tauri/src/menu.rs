@@ -1,5 +1,6 @@
 use tauri::{AppHandle, Manager, Wry};
 use tauri::menu::{Menu, MenuItem, Submenu, PredefinedMenuItem};
+#[cfg(not(target_os = "macos"))]
 use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton};
 use tauri::Emitter;
 
