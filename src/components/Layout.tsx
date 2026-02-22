@@ -11,7 +11,6 @@ import {
   Languages,
   Moon,
   Sun,
-  CalendarClock,
   ChevronLeft,
   ChevronRight,
   FolderTree,
@@ -52,7 +51,6 @@ export default function Layout({ children }: LayoutProps) {
     { path: "/", label: t("nav.dashboard"), icon: LayoutDashboard },
     { path: "/logs", label: t("nav.logs"), icon: ScrollText },
     { path: "/workspace", label: t("nav.workspace"), icon: FolderTree },
-    { path: "/cron", label: t("nav.cron"), icon: CalendarClock },
     { path: "/config", label: t("nav.config"), icon: Settings },
     { path: "/about", label: t("nav.about"), icon: Info },
   ];

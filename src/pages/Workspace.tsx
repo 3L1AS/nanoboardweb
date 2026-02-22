@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { fsApi, sessionApi, skillApi, chatSessionApi } from "../lib/tauri";
+import { fsApi, sessionApi, skillApi, chatSessionApi, cronApi } from "../lib/tauri";
 import { useToast } from "../contexts/ToastContext";
 import {
   FileText,
@@ -27,14 +27,23 @@ import {
   User,
   Bot,
   Settings,
+  Plus,
+  Timer,
+  CalendarClock,
+  Power,
+  PowerOff,
+  Pencil,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import EmptyState from "../components/EmptyState";
 import ConfirmDialog from "../components/ConfirmDialog";
-import type { Skill, Memory as MemoryType } from "../types";
+import type { Skill, Memory as MemoryType, CronJob, CronSchedule } from "../types";
 
 // ============== 类型定义 ==============
 
-type TabType = "files" | "skills" | "memory" | "sessions";
+type TabType = "files" | "skills" | "memory" | "sessions" | "cron";
 
 interface FsItem {
   name: string;
@@ -67,6 +76,20 @@ interface ChatSession {
 interface ChatMessage {
   role: string;
   content: string;
+}
+
+interface AddJobForm {
+  name: string;
+  message: string;
+  scheduleType: "cron" | "every" | "at";
+  cronMinute: string;
+  cronHour: string;
+  cronDom: string;
+  cronMonth: string;
+  cronDow: string;
+  everySeconds: string;
+  atTime: string;
+  tz: string;
 }
 
 interface ConfirmDialogState {
@@ -177,6 +200,25 @@ export default function Workspace() {
   const [chatSearchQuery, setChatSearchQuery] = useState("");
   const chatMessagesContainerRef = useRef<HTMLDivElement>(null);
 
+  // ============== 定时任务管理状态 ==============
+  const [cronJobs, setCronJobs] = useState<CronJob[]>([]);
+  const [showCronDialog, setShowCronDialog] = useState(false);
+  const [isCronSubmitting, setIsCronSubmitting] = useState(false);
+  const [editingCronJob, setEditingCronJob] = useState<CronJob | null>(null);
+  const [cronForm, setCronForm] = useState<AddJobForm>({
+    name: "",
+    message: "",
+    scheduleType: "cron",
+    cronMinute: "0",
+    cronHour: "9",
+    cronDom: "*",
+    cronMonth: "*",
+    cronDow: "*",
+    everySeconds: "3600",
+    atTime: "",
+    tz: "",
+  });
+
   // ============== 通用状态 ==============
   const [isLoading, setIsLoading] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>({
@@ -206,6 +248,9 @@ export default function Workspace() {
           break;
         case "sessions":
           await loadChatSessions();
+          break;
+        case "cron":
+          await loadCronJobs();
           break;
       }
     } finally {
@@ -671,6 +716,359 @@ export default function Workspace() {
     }
   }, [chatMessages]);
 
+  // ============== 定时任务管理函数 ==============
+
+  async function loadCronJobs() {
+    try {
+      const result = await cronApi.list();
+      if (result.success) {
+        setCronJobs(result.jobs || []);
+      } else {
+        toast.showError(result.message || t("workspace.cronLoadFailed"));
+      }
+    } catch (error) {
+      toast.showError(t("workspace.cronLoadFailed"));
+    }
+  }
+
+  async function handleAddCronJob() {
+    if (!cronForm.name.trim()) {
+      toast.showError(t("workspace.cronNameRequired"));
+      return;
+    }
+    if (!cronForm.message.trim()) {
+      toast.showError(t("workspace.cronMessageRequired"));
+      return;
+    }
+
+    const scheduleValue =
+      cronForm.scheduleType === "cron"
+        ? getCronExpression()
+        : cronForm.scheduleType === "at"
+        ? cronForm.atTime
+        : cronForm.everySeconds;
+
+    if (!scheduleValue.trim()) {
+      toast.showError(t("workspace.cronScheduleRequired"));
+      return;
+    }
+
+    setIsCronSubmitting(true);
+
+    try {
+      let result;
+
+      if (editingCronJob) {
+        result = await cronApi.update(
+          editingCronJob.id,
+          cronForm.name.trim(),
+          cronForm.message.trim(),
+          cronForm.scheduleType,
+          scheduleValue.trim(),
+          editingCronJob.enabled,
+          cronForm.tz.trim() || undefined
+        );
+      } else {
+        result = await cronApi.add(
+          cronForm.name.trim(),
+          cronForm.message.trim(),
+          cronForm.scheduleType,
+          scheduleValue.trim(),
+          cronForm.tz.trim() || undefined
+        );
+      }
+
+      if (result.success) {
+        toast.showSuccess(editingCronJob ? t("workspace.cronEditSuccess") : t("workspace.cronAddSuccess"));
+        setShowCronDialog(false);
+        resetCronForm();
+        await loadCronJobs();
+      } else {
+        toast.showError(result.message || t("workspace.cronAddFailed"));
+      }
+    } catch (error) {
+      toast.showError(t("workspace.cronAddFailed"));
+    } finally {
+      setIsCronSubmitting(false);
+    }
+  }
+
+  function confirmRemoveCronJob(job: CronJob) {
+    setConfirmDialog({
+      isOpen: true,
+      title: t("workspace.cronRemoveJob"),
+      message: t("workspace.cronRemoveConfirm", { name: job.name || job.id }),
+      onConfirm: async () => {
+        try {
+          const result = await cronApi.remove(job.id);
+          if (result.success) {
+            toast.showSuccess(t("workspace.cronRemoveSuccess"));
+            await loadCronJobs();
+          } else {
+            toast.showError(result.message || t("workspace.cronRemoveFailed"));
+          }
+        } catch (error) {
+          toast.showError(t("workspace.cronRemoveFailed"));
+        } finally {
+          closeConfirmDialog();
+        }
+      },
+    });
+  }
+
+  async function toggleCronJobEnabled(job: CronJob) {
+    const isEnabled = job.enabled;
+    try {
+      const result = await cronApi.enable(job.id, isEnabled);
+      if (result.success) {
+        toast.showSuccess(isEnabled ? t("workspace.cronDisableSuccess") : t("workspace.cronEnableSuccess"));
+        await loadCronJobs();
+      } else {
+        toast.showError(result.message || t("workspace.cronToggleFailed"));
+      }
+    } catch (error) {
+      toast.showError(t("workspace.cronToggleFailed"));
+    }
+  }
+
+  function resetCronForm() {
+    setCronForm({
+      name: "",
+      message: "",
+      scheduleType: "cron",
+      cronMinute: "0",
+      cronHour: "9",
+      cronDom: "*",
+      cronMonth: "*",
+      cronDow: "*",
+      everySeconds: "3600",
+      atTime: "",
+      tz: "",
+    });
+    setEditingCronJob(null);
+  }
+
+  function openEditCronDialog(job: CronJob) {
+    const schedule = job.schedule;
+    let scheduleType: "cron" | "every" | "at" = "cron";
+    let cronMinute = "0",
+      cronHour = "9",
+      cronDom = "*",
+      cronMonth = "*",
+      cronDow = "*";
+    let everySeconds = "3600";
+    let atTime = "";
+
+    if (schedule?.kind === "every") {
+      scheduleType = "every";
+      if (schedule.everyMs) {
+        everySeconds = String(Math.floor(schedule.everyMs / 1000));
+      }
+    } else if (schedule?.kind === "cron" && schedule.expr) {
+      scheduleType = "cron";
+      const parts = schedule.expr.trim().split(/\s+/);
+      if (parts.length === 5) {
+        [cronMinute, cronHour, cronDom, cronMonth, cronDow] = parts;
+      }
+    } else if (schedule?.kind === "at" && schedule.atMs) {
+      scheduleType = "at";
+      const date = new Date(schedule.atMs);
+      atTime = date.toISOString().slice(0, 16);
+    }
+
+    setEditingCronJob(job);
+    setCronForm({
+      name: job.name || "",
+      message: job.payload?.message || "",
+      scheduleType,
+      cronMinute,
+      cronHour,
+      cronDom,
+      cronMonth,
+      cronDow,
+      everySeconds,
+      atTime,
+      tz: job.schedule?.tz || "",
+    });
+    setShowCronDialog(true);
+  }
+
+  function getCronExpression(): string {
+    return `${cronForm.cronMinute} ${cronForm.cronHour} ${cronForm.cronDom} ${cronForm.cronMonth} ${cronForm.cronDow}`;
+  }
+
+  function describeSchedule(schedule: CronSchedule): string {
+    if (!schedule) return "-";
+
+    switch (schedule.kind) {
+      case "cron":
+        return describeCron(schedule.expr || "");
+      case "every":
+        if (schedule.everyMs) {
+          return describeIntervalMs(schedule.everyMs);
+        }
+        return t("workspace.cronIntervalExecute");
+      case "at":
+        if (schedule.atMs) {
+          return `${formatCronTimestamp(schedule.atMs)} ${t("workspace.cronExecuteOnce")}`;
+        }
+        return t("workspace.cronTimedExecute");
+      default:
+        return "-";
+    }
+  }
+
+  function describeCron(expression: string): string {
+    const parts = expression.trim().split(/\s+/);
+    if (parts.length !== 5) return expression;
+
+    const [min, hour, dom, mon, dow] = parts;
+
+    const dowNames: Record<string, string> = {
+      "0": t("workspace.cronDowSun"),
+      "1": t("workspace.cronDowMon"),
+      "2": t("workspace.cronDowTue"),
+      "3": t("workspace.cronDowWed"),
+      "4": t("workspace.cronDowThu"),
+      "5": t("workspace.cronDowFri"),
+      "6": t("workspace.cronDowSat"),
+      "7": t("workspace.cronDowSun"),
+    };
+
+    const monNames: Record<string, string> = {
+      "1": t("workspace.cronMonJan"),
+      "2": t("workspace.cronMonFeb"),
+      "3": t("workspace.cronMonMar"),
+      "4": t("workspace.cronMonApr"),
+      "5": t("workspace.cronMonMay"),
+      "6": t("workspace.cronMonJun"),
+      "7": t("workspace.cronMonJul"),
+      "8": t("workspace.cronMonAug"),
+      "9": t("workspace.cronMonSep"),
+      "10": t("workspace.cronMonOct"),
+      "11": t("workspace.cronMonNov"),
+      "12": t("workspace.cronMonDec"),
+    };
+
+    let timePart = "";
+    if (min === "*" && hour === "*") {
+      timePart = t("workspace.cronDescEveryMinute");
+    } else if (min.startsWith("*/") && hour === "*") {
+      timePart = t("workspace.cronDescEveryNMin", { n: min.slice(2) });
+    } else if (min === "0" && hour.startsWith("*/")) {
+      timePart = t("workspace.cronDescEveryNHour", { n: hour.slice(2) });
+    } else if (min === "0" && hour === "*") {
+      timePart = t("workspace.cronDescEveryHourSharp");
+    } else if (hour !== "*" && min !== "*") {
+      const h = hour.padStart(2, "0");
+      const m = min.padStart(2, "0");
+      timePart = `${h}:${m}`;
+    } else if (hour !== "*" && min === "*") {
+      timePart = t("workspace.cronDescEveryMinOfHour", { hour });
+    } else {
+      timePart = `${min} ${hour}`;
+    }
+
+    let datePart = "";
+    if (dom === "*" && mon === "*" && dow === "*") {
+      datePart = t("workspace.cronDescEveryDay");
+    } else if (dom === "*" && mon === "*" && dow === "1-5") {
+      datePart = t("workspace.cronDescWeekdays");
+    } else if (dom === "*" && mon === "*" && dow === "0,6") {
+      datePart = t("workspace.cronDescWeekends");
+    } else if (dom === "*" && mon === "*" && dow !== "*") {
+      const days = dow
+        .split(",")
+        .map((d) => dowNames[d] || d)
+        .join(", ");
+      datePart = t("workspace.cronDescOnDow", { days });
+    } else if (dom !== "*" && mon === "*" && dow === "*") {
+      datePart = t("workspace.cronDescOnDom", { day: dom });
+    } else if (dom !== "*" && mon !== "*" && dow === "*") {
+      const monName = monNames[mon] || `${mon}${t("workspace.cronDescMonthSuffix")}`;
+      datePart = t("workspace.cronDescOnMonDom", { month: monName, day: dom });
+    } else {
+      const segments: string[] = [];
+      if (mon !== "*")
+        segments.push(monNames[mon] || `${mon}${t("workspace.cronDescMonthSuffix")}`);
+      if (dom !== "*") segments.push(`${dom}${t("workspace.cronDescDaySuffix")}`);
+      if (dow !== "*") {
+        const days = dow
+          .split(",")
+          .map((d) => dowNames[d] || d)
+          .join(", ");
+        segments.push(days);
+      }
+      datePart = segments.join(" ");
+    }
+
+    if (min === "*" && hour === "*") {
+      return `${datePart}，${timePart}`;
+    }
+    return `${datePart} ${timePart} ${t("workspace.cronDescExecute")}`;
+  }
+
+  function describeIntervalMs(ms: number): string {
+    const seconds = Math.floor(ms / 1000);
+    if (seconds < 60) return t("workspace.cronEveryNSeconds", { n: seconds });
+    if (seconds < 3600) return t("workspace.cronEveryNMinutes", { n: Math.floor(seconds / 60) });
+    if (seconds < 86400) return t("workspace.cronEveryNHours", { n: Math.floor(seconds / 3600) });
+    return t("workspace.cronEveryNDays", { n: Math.floor(seconds / 86400) });
+  }
+
+  function describeInterval(schedule: string): string {
+    let s: number;
+    const everyMatch = schedule.match(/every\s+(\d+)\s*(s|m|h|d)?/i);
+    if (everyMatch) {
+      const val = parseInt(everyMatch[1], 10);
+      const unit = (everyMatch[2] || "s").toLowerCase();
+      s =
+        unit === "m"
+          ? val * 60
+          : unit === "h"
+          ? val * 3600
+          : unit === "d"
+          ? val * 86400
+          : val;
+    } else {
+      s = parseInt(schedule, 10);
+    }
+    if (isNaN(s)) return schedule;
+    if (s < 60) return t("workspace.cronEveryNSeconds", { n: s });
+    if (s < 3600) return t("workspace.cronEveryNMinutes", { n: Math.floor(s / 60) });
+    if (s < 86400) return t("workspace.cronEveryNHours", { n: Math.floor(s / 3600) });
+    return t("workspace.cronEveryNDays", { n: Math.floor(s / 86400) });
+  }
+
+  function formatCronTimestamp(ms: number | null): string {
+    if (ms === null) return "-";
+    const date = new Date(ms);
+    return date.toLocaleString("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  function formatCronRelativeTime(ms: number | null): string {
+    if (ms === null) return "-";
+    const now = Date.now();
+    const diff = ms - now;
+
+    if (diff < 0) return t("workspace.cronExpired");
+
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (days > 0) return t("workspace.cronDaysLater", { count: days });
+    if (hours > 0) return t("workspace.cronHoursLater", { count: hours });
+    if (minutes > 0) return t("workspace.cronMinutesLater", { count: minutes });
+    return t("workspace.cronSoon");
+  }
+
   // ============== 辅助函数 ==============
 
   function closeConfirmDialog() {
@@ -774,6 +1172,21 @@ export default function Workspace() {
               </div>
             )}
 
+            {activeTab === "cron" && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-500 dark:text-dark-text-muted">
+                  {cronJobs.length > 0 && t("workspace.cronJobCount", { count: cronJobs.length })}
+                </span>
+                <button
+                  onClick={() => { setShowCronDialog(true); resetCronForm(); }}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+                >
+                  <Plus className="w-4 h-4" />
+                  {t("workspace.cronAddJob")}
+                </button>
+              </div>
+            )}
+
             {/* Tab 切换按钮 - 放在最右侧 */}
             <div className="flex items-center bg-gray-100 dark:bg-dark-bg-sidebar rounded-lg p-1">
               <button
@@ -819,6 +1232,17 @@ export default function Workspace() {
               >
                 <MessageSquare className="w-4 h-4" />
                 {t("workspace.sessionsTab")}
+              </button>
+              <button
+                onClick={() => setActiveTab("cron")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === "cron"
+                    ? "bg-white dark:bg-dark-bg-card text-amber-600 dark:text-amber-400 shadow-sm"
+                    : "text-gray-600 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-text-primary"
+                }`}
+              >
+                <CalendarClock className="w-4 h-4" />
+                {t("workspace.cronTab")}
               </button>
             </div>
           </div>
@@ -1053,6 +1477,170 @@ export default function Workspace() {
                         </div>
                       </div>
                     ))
+                  )
+                )}
+
+                {/* 定时任务列表 */}
+                {activeTab === "cron" && (
+                  isLoading ? (
+                    <div className="flex items-center justify-center h-32">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
+                    </div>
+                  ) : cronJobs.length === 0 ? (
+                    <EmptyState
+                      icon={CalendarClock}
+                      title={t("workspace.noCronJobs")}
+                      description={t("workspace.noCronJobsDesc")}
+                    />
+                  ) : (
+                    <div className="space-y-2">
+                      {cronJobs.map((job, idx) => {
+                        const isEnabled = job.enabled;
+                        const scheduleDesc = describeSchedule(job.schedule);
+                        const nextRunRelative = formatCronRelativeTime(job.state?.nextRunAtMs || null);
+                        const lastRun = formatCronTimestamp(job.state?.lastRunAtMs || null);
+                        const lastStatus = job.state?.lastStatus;
+                        const lastError = job.state?.lastError;
+
+                        return (
+                          <div
+                            key={job.id || idx}
+                            className={`group rounded-lg border transition-all hover:shadow-md ${
+                              isEnabled
+                                ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-500/50"
+                                : "bg-white dark:bg-dark-bg-card border-gray-200 dark:border-dark-border-subtle hover:border-gray-300 dark:hover:border-dark-border-default opacity-80 hover:opacity-100"
+                            }`}
+                          >
+                            <div className="p-3">
+                              {/* 上部：图标 + 名称 + 状态 */}
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <div className={`p-1.5 rounded-lg flex-shrink-0 ${
+                                    isEnabled
+                                      ? "bg-green-100 dark:bg-green-800/40"
+                                      : "bg-gray-100 dark:bg-dark-bg-hover"
+                                  }`}>
+                                    <CalendarClock className={`w-4 h-4 ${
+                                      isEnabled
+                                        ? "text-green-600 dark:text-green-400"
+                                        : "text-gray-500 dark:text-dark-text-muted"
+                                    }`} />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <h3 className="font-semibold text-gray-900 dark:text-dark-text-primary text-sm truncate">
+                                        {job.name || job.id}
+                                      </h3>
+                                      {isEnabled ? (
+                                        <span className="px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] rounded-full flex-shrink-0">
+                                          {t("workspace.enabled")}
+                                        </span>
+                                      ) : (
+                                        <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-dark-bg-hover text-gray-600 dark:text-dark-text-muted text-[10px] rounded-full flex-shrink-0">
+                                          {t("workspace.disabled")}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                {/* 操作按钮 */}
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0">
+                                  <button
+                                    onClick={() => toggleCronJobEnabled(job)}
+                                    className={`p-1 rounded-md transition-colors ${
+                                      isEnabled
+                                        ? "text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                                        : "text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-bg-hover"
+                                    }`}
+                                    title={isEnabled ? t("workspace.disable") : t("workspace.enable")}
+                                  >
+                                    {isEnabled ? (
+                                      <Power className="w-3.5 h-3.5" />
+                                    ) : (
+                                      <PowerOff className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
+                                  <button
+                                    onClick={() => openEditCronDialog(job)}
+                                    className="p-1 text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-md transition-colors"
+                                    title={t("workspace.cronEditJob")}
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => confirmRemoveCronJob(job)}
+                                    className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
+                                    title={t("workspace.cronRemoveJob")}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* 调度信息 */}
+                              <div className="flex items-center gap-2 mb-1.5">
+                                <Timer className={`w-3 h-3 flex-shrink-0 ${
+                                  isEnabled
+                                    ? "text-green-500 dark:text-green-400"
+                                    : "text-gray-400 dark:text-dark-text-muted"
+                                }`} />
+                                <span className={`text-xs font-medium truncate ${
+                                  isEnabled
+                                    ? "text-green-700 dark:text-green-300"
+                                    : "text-gray-600 dark:text-dark-text-secondary"
+                                }`}>
+                                  {scheduleDesc}
+                                </span>
+                                {job.schedule?.kind === "cron" && job.schedule.expr && (
+                                  <code className="text-[9px] text-gray-400 dark:text-dark-text-muted font-mono flex-shrink-0">
+                                    ({job.schedule.expr})
+                                  </code>
+                                )}
+                              </div>
+
+                              {/* 消息内容 */}
+                              {job.payload?.message && (
+                                <div className="flex items-start gap-2 mb-1.5">
+                                  <MessageSquare className="w-3 h-3 text-gray-400 dark:text-dark-text-muted flex-shrink-0 mt-0.5" />
+                                  <p className="text-[11px] text-gray-600 dark:text-dark-text-secondary break-words line-clamp-2 leading-relaxed">
+                                    {job.payload.message}
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* 底部元信息 */}
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-gray-400 dark:text-dark-text-muted pt-1.5 border-t border-gray-200/50 dark:border-dark-border-subtle/50">
+                                {job.state?.nextRunAtMs && (
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="w-2.5 h-2.5" />
+                                    <span>{t("workspace.cronNextRun")}: {nextRunRelative}</span>
+                                  </div>
+                                )}
+                                {lastRun !== "-" && (
+                                  <div className="flex items-center gap-1">
+                                    {lastStatus === "success" ? (
+                                      <CheckCircle className="w-2.5 h-2.5 text-green-500" />
+                                    ) : lastStatus === "failed" ? (
+                                      <XCircle className="w-2.5 h-2.5 text-red-500" />
+                                    ) : (
+                                      <Clock className="w-2.5 h-2.5" />
+                                    )}
+                                    <span>{t("workspace.cronLastRun")}: {lastRun}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* 错误信息 */}
+                              {lastError && (
+                                <div className="mt-1.5 px-2 py-1 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/40 rounded-md">
+                                  <p className="text-[10px] text-red-600 dark:text-red-400">{lastError}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )
                 )}
               </>
@@ -1335,6 +1923,30 @@ export default function Workspace() {
               </div>
             )
           )}
+
+          {/* 定时任务提示 */}
+          {activeTab === "cron" && (
+            <div className="flex-1 flex flex-col items-center justify-center p-6">
+              <div className="max-w-md text-center">
+                <CalendarClock className="w-16 h-16 text-amber-500 dark:text-amber-400 mx-auto mb-4" />
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-dark-text-primary mb-2">
+                  {t("workspace.cronTitle")}
+                </h2>
+                <p className="text-gray-600 dark:text-dark-text-secondary mb-6">
+                  {t("workspace.cronDesc")}
+                </p>
+                <div className="flex flex-col gap-3 text-left bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 rounded-lg p-4">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-amber-700 dark:text-amber-300 space-y-1">
+                      <p>{t("workspace.cronRestartHint")}</p>
+                      <p className="text-amber-600 dark:text-amber-400">{t("workspace.cronChatHint")}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1368,6 +1980,265 @@ export default function Workspace() {
                 </button>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* 添加/编辑定时任务对话框 */}
+      {showCronDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-dark-bg-card rounded-xl shadow-xl max-w-lg w-full p-6 mx-4 transition-colors duration-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`p-2 rounded-lg ${
+                    editingCronJob ? "bg-amber-50 dark:bg-amber-900/30" : "bg-blue-50 dark:bg-blue-900/30"
+                  }`}
+                >
+                  {editingCronJob ? (
+                    <Pencil className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                  ) : (
+                    <Plus className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  )}
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
+                  {editingCronJob ? t("workspace.cronEditJob") : t("workspace.cronAddJob")}
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowCronDialog(false);
+                  resetCronForm();
+                }}
+                className="p-1.5 hover:bg-gray-100 dark:hover:bg-dark-bg-hover rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-dark-text-muted" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* 任务名称 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">
+                  {t("workspace.cronJobName")}
+                </label>
+                <input
+                  type="text"
+                  value={cronForm.name}
+                  onChange={(e) => setCronForm({ ...cronForm, name: e.target.value })}
+                  placeholder={t("workspace.cronJobNamePlaceholder")}
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted"
+                  autoFocus
+                />
+              </div>
+
+              {/* 消息内容 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">
+                  {t("workspace.cronMessageLabel")}
+                </label>
+                <textarea
+                  value={cronForm.message}
+                  onChange={(e) => setCronForm({ ...cronForm, message: e.target.value })}
+                  placeholder={t("workspace.cronMessagePlaceholder")}
+                  rows={3}
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm resize-none text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted"
+                />
+              </div>
+
+              {/* 调度类型 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
+                  {t("workspace.cronScheduleType")}
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => setCronForm({ ...cronForm, scheduleType: "cron" })}
+                    className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                      cronForm.scheduleType === "cron"
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400"
+                        : "border-gray-200 dark:border-dark-border-subtle text-gray-600 dark:text-dark-text-muted hover:border-gray-300"
+                    }`}
+                  >
+                    <CalendarClock className="w-4 h-4" />
+                    Cron
+                  </button>
+                  <button
+                    onClick={() => setCronForm({ ...cronForm, scheduleType: "every" })}
+                    className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                      cronForm.scheduleType === "every"
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400"
+                        : "border-gray-200 dark:border-dark-border-subtle text-gray-600 dark:text-dark-text-muted hover:border-gray-300"
+                    }`}
+                  >
+                    <Clock className="w-4 h-4" />
+                    {t("workspace.cronInterval")}
+                  </button>
+                  <button
+                    onClick={() => setCronForm({ ...cronForm, scheduleType: "at" })}
+                    className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                      cronForm.scheduleType === "at"
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400"
+                        : "border-gray-200 dark:border-dark-border-subtle text-gray-600 dark:text-dark-text-muted hover:border-gray-300"
+                    }`}
+                  >
+                    <Timer className="w-4 h-4" />
+                    {t("workspace.cronRunOnce")}
+                  </button>
+                </div>
+              </div>
+
+              {/* Cron 表达式 / 间隔秒数 / 定时执行 */}
+              {cronForm.scheduleType === "cron" ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">
+                    {t("workspace.cronExpression")}
+                  </label>
+                  <div className="grid grid-cols-5 gap-2">
+                    {[
+                      { key: "cronMinute" as const, label: t("workspace.cronFieldMinute"), placeholder: "0" },
+                      { key: "cronHour" as const, label: t("workspace.cronFieldHour"), placeholder: "9" },
+                      { key: "cronDom" as const, label: t("workspace.cronFieldDom"), placeholder: "*" },
+                      { key: "cronMonth" as const, label: t("workspace.cronFieldMonth"), placeholder: "*" },
+                      { key: "cronDow" as const, label: t("workspace.cronFieldDow"), placeholder: "*" },
+                    ].map((field) => (
+                      <div key={field.key} className="flex flex-col">
+                        <span className="text-xs font-medium text-gray-500 dark:text-dark-text-muted mb-1 text-center">
+                          {field.label}
+                        </span>
+                        <input
+                          type="text"
+                          value={cronForm[field.key]}
+                          onChange={(e) => setCronForm({ ...cronForm, [field.key]: e.target.value })}
+                          placeholder={field.placeholder}
+                          className="w-full px-2 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono text-center text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <CalendarClock className="w-4 h-4 text-blue-500 dark:text-blue-400 flex-shrink-0" />
+                      <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                        {describeCron(getCronExpression())}
+                      </span>
+                    </div>
+                    <p className="text-xs text-blue-500 dark:text-blue-400/70 mt-1 ml-6 font-mono">
+                      {getCronExpression()}
+                    </p>
+                  </div>
+                </div>
+              ) : cronForm.scheduleType === "every" ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">
+                    {t("workspace.cronIntervalSeconds")}
+                  </label>
+                  <input
+                    type="number"
+                    value={cronForm.everySeconds}
+                    onChange={(e) => setCronForm({ ...cronForm, everySeconds: e.target.value })}
+                    placeholder="3600"
+                    min={1}
+                    className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted"
+                  />
+                  <div className="mt-3 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-blue-500 dark:text-blue-400 flex-shrink-0" />
+                      <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                        {describeInterval(cronForm.everySeconds)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">
+                    {t("workspace.cronAtTime")}
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={cronForm.atTime}
+                    onChange={(e) => setCronForm({ ...cronForm, atTime: e.target.value })}
+                    className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted"
+                  />
+                  <div className="mt-3 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Timer className="w-4 h-4 text-blue-500 dark:text-blue-400 flex-shrink-0" />
+                      <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                        {cronForm.atTime
+                          ? t("workspace.cronRunOnceAt", { time: cronForm.atTime.replace("T", " ") })
+                          : t("workspace.cronSelectTime")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 时区选择 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">
+                  {t("workspace.cronTimezone")}
+                </label>
+                <select
+                  value={cronForm.tz}
+                  onChange={(e) => setCronForm({ ...cronForm, tz: e.target.value })}
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary"
+                >
+                  <option value="">{t("workspace.cronTimezoneDefault")}</option>
+                  <option value="Asia/Shanghai">Asia/Shanghai (北京时间)</option>
+                  <option value="Asia/Hong_Kong">Asia/Hong_Kong (香港)</option>
+                  <option value="Asia/Tokyo">Asia/Tokyo (东京)</option>
+                  <option value="Asia/Singapore">Asia/Singapore (新加坡)</option>
+                  <option value="America/New_York">America/New_York (纽约)</option>
+                  <option value="America/Los_Angeles">America/Los_Angeles (洛杉矶)</option>
+                  <option value="America/Chicago">America/Chicago (芝加哥)</option>
+                  <option value="Europe/London">Europe/London (伦敦)</option>
+                  <option value="Europe/Paris">Europe/Paris (巴黎)</option>
+                  <option value="Europe/Berlin">Europe/Berlin (柏林)</option>
+                  <option value="Australia/Sydney">Australia/Sydney (悉尼)</option>
+                  <option value="UTC">UTC (协调世界时)</option>
+                </select>
+                <p className="mt-1 text-xs text-gray-400 dark:text-dark-text-muted">
+                  {t("workspace.cronTimezoneHint")}
+                </p>
+              </div>
+
+              {/* 投递提示 */}
+              <div className="px-3 py-2.5 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg">
+                <div className="flex items-start gap-2">
+                  <MessageSquare className="w-4 h-4 text-gray-400 dark:text-dark-text-muted flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-gray-500 dark:text-dark-text-muted leading-relaxed">
+                    {t("workspace.cronDeliverHint")}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 操作按钮 */}
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowCronDialog(false);
+                  resetCronForm();
+                }}
+                className="px-4 py-2 bg-gray-100 dark:bg-dark-bg-hover hover:bg-gray-200 dark:hover:bg-dark-bg-active text-gray-700 dark:text-dark-text-primary rounded-lg transition-colors text-sm font-medium"
+              >
+                {t("workspace.cronCancel")}
+              </button>
+              <button
+                onClick={handleAddCronJob}
+                disabled={isCronSubmitting}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition-colors text-sm font-medium"
+              >
+                {isCronSubmitting
+                  ? editingCronJob
+                    ? t("workspace.cronSaving")
+                    : t("workspace.cronAdding")
+                  : editingCronJob
+                  ? t("workspace.cronSave")
+                  : t("workspace.cronConfirm")}
+              </button>
+            </div>
           </div>
         </div>
       )}
