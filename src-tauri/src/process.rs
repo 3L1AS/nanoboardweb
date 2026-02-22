@@ -1191,24 +1191,27 @@ pub async fn check_oauth_token(provider: String) -> Result<serde_json::Value, St
             // 尝试读取并验证 token 文件
             if let Ok(content) = std::fs::read_to_string(&token_path) {
                 if let Ok(token_data) = serde_json::from_str::<serde_json::Value>(&content) {
-                    // 检查是否有 access token
+                    // 检查是否有 access token（支持 "access" 和 "token" 两种字段名）
                     let has_access = token_data.get("access")
+                        .or_else(|| token_data.get("token"))
                         .and_then(|v| v.as_str())
                         .map(|s| !s.is_empty())
                         .unwrap_or(false);
 
                     if has_access {
                         // 检查 token 是否过期
-                        let is_expired = token_data.get("expires")
-                            .and_then(|v| v.as_i64())
-                            .map(|expires| {
-                                let now = std::time::SystemTime::now()
-                                    .duration_since(std::time::UNIX_EPOCH)
-                                    .unwrap()
-                                    .as_millis() as i64;
-                                expires < now
-                            })
-                            .unwrap_or(false);
+                        // 支持 "expires"（毫秒）和 "expires_at"（秒，litellm 格式）
+                        let now_secs = std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs() as i64;
+                        let is_expired = if let Some(expires_at) = token_data.get("expires_at").and_then(|v| v.as_i64()) {
+                            expires_at < now_secs
+                        } else if let Some(expires_ms) = token_data.get("expires").and_then(|v| v.as_i64()) {
+                            expires_ms < (now_secs * 1000)
+                        } else {
+                            false
+                        };
 
                         return Ok(json!({
                             "has_token": true,
@@ -1322,6 +1325,16 @@ fn get_oauth_token_paths(home_dir: &std::path::Path, provider: &str) -> Vec<std:
                 .join("oauth.json");
             paths.push(default_path);
         }
+    }
+
+    // ~/.config/litellm/{provider_filename}/api-key.json（nanobot 实际使用的存储格式）
+    {
+        let litellm_path = home_dir
+            .join(".config")
+            .join("litellm")
+            .join(&provider_filename)
+            .join("api-key.json");
+        paths.insert(0, litellm_path);
     }
 
     // 环境变量覆盖

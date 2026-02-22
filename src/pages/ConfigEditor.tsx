@@ -44,7 +44,8 @@ import type {
   Provider,
   McpServer,
 } from "@/config/types";
-import { AVAILABLE_PROVIDERS, isProviderConfigured } from "@/config/providers";
+import { AVAILABLE_PROVIDERS, isProviderConfigured, isOAuthProvider } from "@/config/providers";
+import { processApi } from "@/lib/tauri";
 import { CHANNELS_CONFIG } from "@/config/channels";
 import { formatTimestamp } from "@/utils/format";
 import ProviderEditModal from "@/components/config/ProviderEditModal";
@@ -107,6 +108,8 @@ export default function ConfigEditor() {
   });
   const [providerAgentConfigs, setProviderAgentConfigs] = useState<Record<string, ProviderAgentConfig>>({});
   const [mcpServersConfig, setMcpServersConfig] = useState<Record<string, McpServerWithState>>({});
+  // OAuth provider token 状态：true=已登录, false=未登录, "expired"=已过期
+  const [oauthTokenStatuses, setOauthTokenStatuses] = useState<Record<string, boolean | "expired">>({});
 
 
   const [showHistory, setShowHistory] = useState(false);
@@ -150,7 +153,28 @@ export default function ConfigEditor() {
   useEffect(() => {
     loadConfig();
     loadProviderAgentConfigs();
+    checkAllOAuthStatuses();
   }, []);
+
+  // 检查所有 OAuth provider 的 token 状态
+  const checkAllOAuthStatuses = async () => {
+    const oauthProviders = AVAILABLE_PROVIDERS.filter(p => isOAuthProvider(p.id));
+    const statuses: Record<string, boolean | "expired"> = {};
+    await Promise.all(
+      oauthProviders.map(async (provider) => {
+        if (!provider.loginCommand) return;
+        try {
+          const result = await processApi.checkOAuthToken(provider.loginCommand);
+          statuses[provider.id] = result.has_token
+            ? (result.is_expired ? "expired" : true)
+            : false;
+        } catch {
+          statuses[provider.id] = false;
+        }
+      })
+    );
+    setOauthTokenStatuses(statuses);
+  };
 
   // 监听展开状态变化并保存到 localStorage
   useEffect(() => {
@@ -1098,6 +1122,10 @@ export default function ConfigEditor() {
                   {AVAILABLE_PROVIDERS.map((provider) => {
                     const isConfigured = isProviderConfigured(config, provider.id);
                     const isCurrentProvider = selectedProviderId === provider.id;
+                    const isOAuth = isOAuthProvider(provider.id);
+                    const oauthStatus = isOAuth ? oauthTokenStatuses[provider.id] : undefined;
+                    const isOAuthLoggedIn = oauthStatus === true;
+                    const isOAuthExpired = oauthStatus === "expired";
 
                     return (
                       <div
@@ -1105,7 +1133,11 @@ export default function ConfigEditor() {
                         className={`group rounded-lg border transition-all hover:shadow-md ${
                           isCurrentProvider
                             ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-500/50 ring-2 ring-blue-200 dark:ring-blue-500/30"
-                            : isConfigured
+                            : isOAuthLoggedIn
+                            ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-500/50"
+                            : isOAuthExpired
+                            ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-500/50"
+                            : isConfigured && !isOAuth
                             ? "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-500/50"
                             : "bg-white dark:bg-dark-bg-card border-gray-200 dark:border-dark-border-subtle hover:border-gray-300 dark:hover:border-dark-border-default"
                         }`}
@@ -1132,14 +1164,24 @@ export default function ConfigEditor() {
                                       {t("config.currentUse")}
                                     </span>
                                   )}
-                                  {!isCurrentProvider && isConfigured && (
+                                  {!isCurrentProvider && isOAuthLoggedIn && (
+                                    <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs rounded-full">
+                                      {t("config.oauthConfigured")}
+                                    </span>
+                                  )}
+                                  {!isCurrentProvider && isOAuthExpired && (
+                                    <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs rounded-full">
+                                      {t("config.tokenExpiredShort")}
+                                    </span>
+                                  )}
+                                  {!isCurrentProvider && !isOAuthLoggedIn && !isOAuthExpired && isConfigured && !isOAuth && (
                                     <span className="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs rounded-full">
                                       {t("config.configured")}
                                     </span>
                                   )}
-                                  {!isConfigured && (
+                                  {!isCurrentProvider && !isOAuthLoggedIn && !isOAuthExpired && !isConfigured && (
                                     <span className="px-2 py-0.5 bg-gray-100 dark:bg-dark-bg-hover text-gray-600 dark:text-dark-text-muted text-xs rounded-full">
-                                      {t("config.notConfigured")}
+                                      {isOAuth ? t("config.notLoggedIn") : t("config.notConfigured")}
                                     </span>
                                   )}
                                 </div>
@@ -1684,6 +1726,12 @@ export default function ConfigEditor() {
         onUpdateProvider={updateProvider}
         onRemoveProvider={removeProvider}
         onUpdateProviderAgentConfig={updateProviderAgentConfig}
+        onOAuthStatusChange={(pid, hasToken, isExpired) => {
+          setOauthTokenStatuses(prev => ({
+            ...prev,
+            [pid]: hasToken ? (isExpired ? "expired" : true) : false,
+          }));
+        }}
       />
 
       {/* 渠道编辑模态框 */}

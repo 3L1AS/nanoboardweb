@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Trash2, LogIn, ExternalLink, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
+import { Trash2, LogIn, LogOut, ExternalLink, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
 import {
   Bot,
   Brain,
@@ -55,6 +55,7 @@ interface ProviderEditModalProps {
   onUpdateProvider: (name: string, field: keyof import("@/config/types").Provider, value: unknown) => void;
   onRemoveProvider: (name: string) => void;
   onUpdateProviderAgentConfig: (providerId: string, field: keyof ProviderAgentConfig, value: unknown) => void;
+  onOAuthStatusChange?: (providerId: string, hasToken: boolean, isExpired: boolean) => void;
 }
 
 export default function ProviderEditModal({
@@ -70,6 +71,7 @@ export default function ProviderEditModal({
   onUpdateProvider,
   onRemoveProvider,
   onUpdateProviderAgentConfig,
+  onOAuthStatusChange,
 }: ProviderEditModalProps) {
   const { t } = useTranslation();
   const { showToast } = useToast();
@@ -95,6 +97,7 @@ export default function ProviderEditModal({
     try {
       const result = await processApi.checkOAuthToken(providerInfo.loginCommand);
       setOauthTokenStatus(result);
+      onOAuthStatusChange?.(providerId, result.has_token, result.is_expired ?? false);
     } catch (error) {
       console.error("检查OAuth token失败:", error);
       setOauthTokenStatus({
@@ -227,48 +230,100 @@ export default function ProviderEditModal({
               {/* OAuth Provider 显示登录按钮 */}
               {isOAuth ? (
                 <div className="space-y-4">
-                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-500/30">
-                    <div className="flex items-center gap-3 mb-3">
-                      <LogIn className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                      <span className="font-medium text-blue-900 dark:text-blue-100">
-                        {t("config.oauthLogin")}
-                      </span>
+                  {/* 已登录且有效：绿色卡片 */}
+                  {oauthTokenStatus?.has_token && !oauthTokenStatus?.is_expired ? (
+                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-500/30">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                          <div>
+                            <span className="font-medium text-green-900 dark:text-green-100">
+                              {t("config.oauthLoggedIn")}
+                            </span>
+                            <p className="text-xs text-green-700 dark:text-green-400 mt-0.5">
+                              {t("config.oauthLoginDesc")}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                          <button
+                            onClick={handleOAuthLogin}
+                            disabled={isLoggingIn}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+                          >
+                            {isLoggingIn ? (
+                              <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <LogOut className="w-3.5 h-3.5" />
+                            )}
+                            {t("config.relogin")}
+                          </button>
+                          <button
+                            onClick={checkOAuthTokenStatus}
+                            disabled={isCheckingToken}
+                            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg transition-colors disabled:opacity-50"
+                            title={t("config.refreshTokenStatus")}
+                          >
+                            <RefreshCw className={`w-4 h-4 ${isCheckingToken ? "animate-spin" : ""}`} />
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
-                      {t("config.oauthLoginDesc")}
-                    </p>
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={handleOAuthLogin}
-                        disabled={isLoggingIn}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium"
-                      >
-                        {isLoggingIn ? (
-                          <>
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            {t("config.loggingIn")}
-                          </>
-                        ) : (
-                          <>
-                            <LogIn className="w-4 h-4" />
-                            {t("config.login")}
-                          </>
-                        )}
-                      </button>
-                      <button
-                        onClick={checkOAuthTokenStatus}
-                        disabled={isCheckingToken}
-                        className="flex items-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 text-gray-700 dark:text-gray-200 rounded-lg transition-colors text-sm"
-                        title={t("config.refreshTokenStatus")}
-                      >
-                        <RefreshCw className={`w-4 h-4 ${isCheckingToken ? "animate-spin" : ""}`} />
-                      </button>
+                  ) : (
+                    /* 未登录或已过期：蓝色/黄色卡片 */
+                    <div className={`p-4 rounded-lg border ${
+                      oauthTokenStatus?.is_expired
+                        ? "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-500/30"
+                        : "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-500/30"
+                    }`}>
+                      <div className="flex items-center gap-3 mb-3">
+                        <LogIn className={`w-5 h-5 ${oauthTokenStatus?.is_expired ? "text-yellow-600 dark:text-yellow-400" : "text-blue-600 dark:text-blue-400"}`} />
+                        <span className={`font-medium ${oauthTokenStatus?.is_expired ? "text-yellow-900 dark:text-yellow-100" : "text-blue-900 dark:text-blue-100"}`}>
+                          {oauthTokenStatus?.is_expired ? t("config.tokenExpired") : t("config.oauthLogin")}
+                        </span>
+                      </div>
+                      <p className={`text-sm mb-4 ${oauthTokenStatus?.is_expired ? "text-yellow-700 dark:text-yellow-300" : "text-blue-700 dark:text-blue-300"}`}>
+                        {t("config.oauthLoginDesc")}
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={handleOAuthLogin}
+                          disabled={isLoggingIn}
+                          className={`flex items-center gap-2 px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium ${
+                            oauthTokenStatus?.is_expired
+                              ? "bg-yellow-600 hover:bg-yellow-700"
+                              : "bg-blue-600 hover:bg-blue-700"
+                          }`}
+                        >
+                          {isLoggingIn ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              {t("config.loggingIn")}
+                            </>
+                          ) : (
+                            <>
+                              <LogIn className="w-4 h-4" />
+                              {oauthTokenStatus?.is_expired ? t("config.relogin") : t("config.login")}
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={checkOAuthTokenStatus}
+                          disabled={isCheckingToken}
+                          className="flex items-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 text-gray-700 dark:text-gray-200 rounded-lg transition-colors text-sm"
+                          title={t("config.refreshTokenStatus")}
+                        >
+                          <RefreshCw className={`w-4 h-4 ${isCheckingToken ? "animate-spin" : ""}`} />
+                        </button>
+                      </div>
+                      {/* 检查中或未知状态 */}
+                      {(isCheckingToken || oauthTokenStatus === null) && (
+                        <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-500/30">
+                          {renderOAuthStatus()}
+                        </div>
+                      )}
                     </div>
-                    {/* Token状态显示 */}
-                    <div className="mt-4 pt-3 border-t border-blue-200 dark:border-blue-500/30">
-                      {renderOAuthStatus()}
-                    </div>
-                  </div>
+                  )}
                   {providerInfo.apiUrl && (
                     <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-dark-text-muted">
                       <ExternalLink className="w-4 h-4" />
