@@ -555,6 +555,10 @@ export default function Workspace() {
   // ============== 过滤数据 ==============
 
   const filteredItems = items.filter((item) => {
+    // 排除 sessions 文件夹（已有单独的"会话"界面）
+    if (item.name === "sessions" && item.type === "directory") {
+      return false;
+    }
     const query = fileSearchQuery.toLowerCase();
     return item.name.toLowerCase().includes(query);
   });
