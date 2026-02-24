@@ -20,7 +20,7 @@ fsRouter.get('/tree', (req: Request, res: Response) => {
 
     try {
         if (!fs.existsSync(targetPath)) {
-            return res.json([]);
+            return res.json({ success: true, path: relativePath, items: [] });
         }
 
         const items = fs.readdirSync(targetPath, { withFileTypes: true });
@@ -30,7 +30,7 @@ fsRouter.get('/tree', (req: Request, res: Response) => {
             path: path.join(relativePath, item.name).replace(/\\/g, '/')
         }));
 
-        res.json(result);
+        res.json({ success: true, path: relativePath, items: result });
     } catch (error) {
         res.status(500).json({ error: String(error) });
     }
@@ -48,7 +48,7 @@ fsRouter.get('/content', (req: Request, res: Response) => {
 
     try {
         const content = fs.readFileSync(targetPath, 'utf8');
-        res.json({ content });
+        res.json({ success: true, content });
     } catch (error) {
         res.status(500).json({ error: String(error) });
     }
@@ -70,5 +70,42 @@ fsRouter.post('/save', (req: Request, res: Response) => {
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: String(error) });
+    }
+});
+
+fsRouter.post('/delete', (req: Request, res: Response) => {
+    try {
+        const { path: relativePath } = req.body;
+        if (!relativePath) return res.status(400).json({ error: 'Path is required' });
+        const targetPath = path.resolve(process.env.NANOBOT_DIR || './test_volume', relativePath);
+        if (!targetPath.startsWith(path.resolve(process.env.NANOBOT_DIR || './test_volume'))) return res.status(403).json({ error: 'Access denied' });
+
+        if (fs.existsSync(targetPath)) {
+            if (fs.statSync(targetPath).isDirectory()) {
+                fs.rmSync(targetPath, { recursive: true, force: true });
+            } else {
+                fs.unlinkSync(targetPath);
+            }
+        }
+        return res.json({ success: true });
+    } catch (e) {
+        return res.status(500).json({ error: String(e) });
+    }
+});
+
+fsRouter.post('/rename', (req: Request, res: Response) => {
+    try {
+        const { path: relativePath, newName } = req.body;
+        if (!relativePath || !newName) return res.status(400).json({ error: 'Path and newName required' });
+        const targetPath = path.resolve(process.env.NANOBOT_DIR || './test_volume', relativePath);
+        const newPath = path.join(path.dirname(targetPath), newName);
+        if (!targetPath.startsWith(path.resolve(process.env.NANOBOT_DIR || './test_volume')) || !newPath.startsWith(path.resolve(process.env.NANOBOT_DIR || './test_volume'))) return res.status(403).json({ error: 'Access denied' });
+
+        if (fs.existsSync(targetPath)) {
+            fs.renameSync(targetPath, newPath);
+        }
+        return res.json({ success: true });
+    } catch (e) {
+        return res.status(500).json({ error: String(e) });
     }
 });
