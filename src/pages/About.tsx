@@ -22,8 +22,8 @@ const APP_INFO = {
   version: "0.2.5",
   description: "一个极轻量化 nanobot Tauri 管理助手",
   descriptionEn: "An Ultra-lightweight nanobot Tauri Management Assistant",
-  github: "https://github.com/Freakz3z/nanoboardweb",
-  releasesApi: "https://api.github.com/repos/Freakz3z/nanoboardweb/releases/latest",
+  github: "https://github.com/3L1AS/nanoboardweb",
+  releasesApi: "https://api.github.com/repos/3L1AS/nanoboardweb/releases/latest",
 };
 
 interface SystemInfoData {

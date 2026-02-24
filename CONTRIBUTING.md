@@ -6,7 +6,7 @@
 
 ### 报告 Bug
 
-请通过 [GitHub Issues](https://github.com/Freakz3z/nanoboardweb/issues) 报告 bug，并提供以下信息：
+请通过 [GitHub Issues](https://github.com/3L1AS/nanoboardweb/issues) 报告 bug，并提供以下信息：
 
 - **清晰的标题和描述** - 简明扼要地说明问题
 - **复现步骤** - 详细的步骤列表
@@ -86,7 +86,7 @@ cd nanoboardweb
 #### 3. 添加上游远程仓库
 
 ```bash
-git remote add upstream https://github.com/Freakz3z/nanoboardweb.git
+git remote add upstream https://github.com/3L1AS/nanoboardweb.git
 ```
 
 #### 4. 创建特性分支
@@ -283,7 +283,7 @@ npm run lint
 
 1. 查看 [README](README.md)
 2. 阅读 [开发指南](DEVELOPMENT.md)
-3. 搜索 [已有 Issues](https://github.com/Freakz3z/nanoboardweb/issues)
+3. 搜索 [已有 Issues](https://github.com/3L1AS/nanoboardweb/issues)
 4. 创建新的 Issue 进行讨论
 
 ## 📜 行为准则
@@ -322,4 +322,4 @@ npm run lint
 
 ---
 
-有问题？[创建一个 Issue](https://github.com/Freakz3z/nanoboardweb/issues)
+有问题？[创建一个 Issue](https://github.com/3L1AS/nanoboardweb/issues)

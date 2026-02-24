@@ -4,7 +4,7 @@ services:
   nanoboardweb:
     build: .
     # Or use a pre-built image if you publish one:
-    # image: freakz3z/nanoboardweb:latest
+    # image: 3l1as/nanoboardweb:latest
     container_name: nanoboardweb
     restart: always
     ports:
@@ -24,7 +24,7 @@ services:
 
   nanobot:
     # Replace with your actual nanobot image
-    image: freakz3z/nanobot:latest
+    image: 3l1as/nanobot:latest
     container_name: nanobot
     restart: always
     volumes:
