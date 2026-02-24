@@ -216,7 +216,7 @@ export const skillApi = {
 // --- CHAT SESSION API ---
 export const chatSessionApi = {
     list: async () => { return { sessions: [] }; },
-    getContent: async (_id: string) => { return { success: true, messages: [] }; }
+    getContent: async (_id: string) => { return { success: true, messages: [], message: '' }; }
 };
 
 // --- CRON API ---
@@ -225,19 +225,19 @@ export const cronApi = {
         const res = await fetch(`${API_URL}/cron/list`, { headers: getAuthHeaders() });
         return handleResponse(res);
     },
-    add: async (job: any) => {
+    add: async (name: string, message: string, schedule_type: string, schedule_value: string, timezone?: string) => {
         const res = await fetch(`${API_URL}/cron/add`, {
             method: 'POST',
             headers: getAuthHeaders(),
-            body: JSON.stringify({ job })
+            body: JSON.stringify({ job: { name, message, schedule_type, schedule_value, timezone, enabled: true } })
         });
         return handleResponse(res);
     },
-    update: async (job: any) => {
+    update: async (id: string, name: string, message: string, schedule_type: string, schedule_value: string, enabled: boolean, timezone?: string) => {
         const res = await fetch(`${API_URL}/cron/update`, {
             method: 'POST',
             headers: getAuthHeaders(),
-            body: JSON.stringify({ job })
+            body: JSON.stringify({ job: { id, name, message, schedule_type, schedule_value, enabled, timezone } })
         });
         return handleResponse(res);
     },
