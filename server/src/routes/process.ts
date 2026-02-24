@@ -1,9 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import util from 'util';
 import { authenticateJWT } from '../middlewares/auth';
 
-const execPromise = util.promisify(exec);
+const execFilePromise = util.promisify(execFile);
 export const processRouter = Router();
 
 const CONTAINER_NAME = process.env.NANOBOT_CONTAINER_NAME || 'nanobot';
@@ -12,7 +12,7 @@ processRouter.use(authenticateJWT);
 
 processRouter.get('/status', async (req: Request, res: Response) => {
     try {
-        const { stdout } = await execPromise(`docker inspect -f '{{.State.Running}}' ${CONTAINER_NAME}`);
+        const { stdout } = await execFilePromise('docker', ['inspect', '-f', '{{.State.Running}}', CONTAINER_NAME]);
         const isRunning = stdout.trim() === 'true';
         res.json({ running: isRunning });
     } catch (error) {
@@ -23,7 +23,7 @@ processRouter.get('/status', async (req: Request, res: Response) => {
 
 processRouter.post('/start', async (req: Request, res: Response) => {
     try {
-        await execPromise(`docker start ${CONTAINER_NAME}`);
+        await execFilePromise('docker', ['start', CONTAINER_NAME]);
         res.json({ success: true, message: 'Container started' });
     } catch (error) {
         res.status(500).json({ success: false, error: String(error) });
@@ -32,7 +32,7 @@ processRouter.post('/start', async (req: Request, res: Response) => {
 
 processRouter.post('/stop', async (req: Request, res: Response) => {
     try {
-        await execPromise(`docker stop ${CONTAINER_NAME}`);
+        await execFilePromise('docker', ['stop', CONTAINER_NAME]);
         res.json({ success: true, message: 'Container stopped' });
     } catch (error) {
         res.status(500).json({ success: false, error: String(error) });
@@ -41,7 +41,7 @@ processRouter.post('/stop', async (req: Request, res: Response) => {
 
 processRouter.post('/restart', async (req: Request, res: Response) => {
     try {
-        await execPromise(`docker restart ${CONTAINER_NAME}`);
+        await execFilePromise('docker', ['restart', CONTAINER_NAME]);
         res.json({ success: true, message: 'Container restarted' });
     } catch (error) {
         res.status(500).json({ success: false, error: String(error) });
@@ -50,7 +50,7 @@ processRouter.post('/restart', async (req: Request, res: Response) => {
 
 processRouter.get('/dashboard', async (req: Request, res: Response) => {
     try {
-        const { stdout: statusOut } = await execPromise(`docker inspect -f '{{.State.Running}}' ${CONTAINER_NAME}`).catch(() => ({ stdout: 'false' }));
+        const { stdout: statusOut } = await execFilePromise('docker', ['inspect', '-f', '{{.State.Running}}', CONTAINER_NAME]).catch(() => ({ stdout: 'false' }));
         const running = statusOut.trim() === 'true';
 
         // Mock other dashboard data that the frontend expects
@@ -74,8 +74,9 @@ processRouter.get('/dashboard', async (req: Request, res: Response) => {
 
 processRouter.get('/logs', async (req: Request, res: Response) => {
     try {
-        const limit = parseInt(req.query.limit as string) || 500;
-        const { stdout, stderr } = await execPromise(`docker logs --tail ${limit} ${CONTAINER_NAME}`).catch(err => ({ stdout: '', stderr: String(err) }));
+        const limitStr = parseInt(req.query.limit as string) || 500;
+        const limit = Math.min(Math.max(1, limitStr), 5000); // Sanitize and cap limit
+        const { stdout, stderr } = await execFilePromise('docker', ['logs', '--tail', String(limit), CONTAINER_NAME]).catch(err => ({ stdout: '', stderr: String(err) }));
         const logs = [...stdout.split('\n'), ...stderr.split('\n')].filter(l => l.trim() !== '');
         res.json({ logs });
     } catch (error) {
