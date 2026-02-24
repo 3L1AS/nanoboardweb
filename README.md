@@ -101,5 +101,5 @@ nanoboardweb/
 
 ## Acknowledgements
 - Migrated to Web by [3L1AS](https://github.com/3L1AS).
-- Originally the Tauri desktop app created by [freakz3z](https://github.com/freakz3z/nanoboard).
+- Originally the Tauri desktop app created by [Freakz3z](https://github.com/Freakz3z/nanoboard).
 - Built to manage [nanobot](https://github.com/HKUDS/nanobot).
