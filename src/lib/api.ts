@@ -1,6 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+// Use VITE_API_URL if provided, else in DEV use localhost:8080, else in PROD use relative /api
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8080/api' : '/api');
 
 const getAuthHeaders = () => {
     const token = localStorage.getItem('nanoboardweb_token');
@@ -196,7 +197,9 @@ let logListeners: ((logs: string[]) => void)[] = [];
 
 function getSocket() {
     if (!socket) {
-        socket = io(API_URL.replace('/api', ''), {
+        // Find the base URL for the socket connection by stripping the /api suffix (or keeping empty string for relative paths)
+        const socketUrl = API_URL === '/api' ? '' : API_URL.replace(/\/api$/, '');
+        socket = io(socketUrl, {
             auth: { token: localStorage.getItem('nanoboardweb_token') }
         });
         socket.on('log-update', (logs: string[]) => {
