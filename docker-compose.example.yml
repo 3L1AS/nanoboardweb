@@ -19,3 +19,13 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       # Essential: Mount the EXACT same generic volume as your nanobot container so you can edit config files
       - /root/.nanobot:/root/.nanobot
+    # OPTIONAL: If your existing Nanobot container runs on a specific custom Docker network
+    # and you want this dashboard to join that exact same network / project, uncomment below:
+    # networks:
+    #   - nanobot_network
+
+    # OPTIONAL: Define the external network your Nanobot is using
+    # networks:
+    #   nanobot_network:
+    #     external: true
+    #     name: name_of_your_nanobot_network
