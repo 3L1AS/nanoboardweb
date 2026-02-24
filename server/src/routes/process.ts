@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { execFile } from 'child_process';
 import util from 'util';
+import os from 'os';
 import { authenticateJWT } from '../middlewares/auth';
 
 const execFilePromise = util.promisify(execFile);
@@ -53,13 +54,40 @@ processRouter.get('/dashboard', async (req: Request, res: Response) => {
         const { stdout: statusOut } = await execFilePromise('docker', ['inspect', '-f', '{{.State.Running}}', CONTAINER_NAME]).catch(() => ({ stdout: 'false' }));
         const running = statusOut.trim() === 'true';
 
+        const totalMem = os.totalmem();
+        const freeMem = os.freemem();
+        const usedMem = totalMem - freeMem;
+        const memoryUsage = totalMem > 0 ? (usedMem / totalMem) * 100 : 0;
+
         // Mock other dashboard data that the frontend expects
         const dashboardData = {
             status: { running },
             systemInfo: {
-                os: 'Linux (Docker Host)',
-                memory: { total: 0, used: 0 },
-                cpu: { usage: 0 }
+                os: `${os.type()} ${os.release()}`,
+                cpu: {
+                    usage: 0,
+                    usage_text: '0%'
+                },
+                memory: {
+                    total: totalMem,
+                    used: usedMem,
+                    available: freeMem,
+                    usage_percent: memoryUsage,
+                    usage_text: `${memoryUsage.toFixed(1)}%`,
+                    used_text: `${(usedMem / 1024 / 1024 / 1024).toFixed(2)} GB`,
+                    available_text: `${(freeMem / 1024 / 1024 / 1024).toFixed(2)} GB`,
+                    total_text: `${(totalMem / 1024 / 1024 / 1024).toFixed(2)} GB`
+                },
+                swap: {
+                    total: 0,
+                    used: 0,
+                    available: 0,
+                    usage_percent: 0,
+                    usage_text: '0%',
+                    used_text: '0 GB',
+                    available_text: '0 GB',
+                    total_text: '0 GB'
+                }
             },
             config: { error: null, data: {} },
             logStatistics: { total: 0, debug: 0, info: 0, warn: 0, error: 0 },
