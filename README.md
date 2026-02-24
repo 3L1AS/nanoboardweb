@@ -27,7 +27,7 @@ A lightweight, web-based management dashboard for Nanobot.
 
 ## Quick Start (Docker Deployment)
 
-The easiest way to run NanoboardWeb Web is via Docker Compose, running it directly alongside your Nanobot instance.
+The easiest way to run NanoboardWeb is via Docker Compose, running it directly alongside your Nanobot instance.
 
 ### 1. Configure Docker Compose
 Create a `docker-compose.yml` file. You can find an example template in `docker-compose.example.yml`.
