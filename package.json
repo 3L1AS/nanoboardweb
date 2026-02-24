@@ -8,11 +8,11 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/3L1AS/nanoboardwebweb.git"
+    "url": "https://github.com/3L1AS/nanoboardweb.git"
   },
-  "homepage": "https://github.com/3L1AS/nanoboardwebweb#readme",
+  "homepage": "https://github.com/3L1AS/nanoboardweb#readme",
   "bugs": {
-    "url": "https://github.com/3L1AS/nanoboardwebweb/issues"
+    "url": "https://github.com/3L1AS/nanoboardweb/issues"
   },
   "scripts": {
     "dev": "vite",

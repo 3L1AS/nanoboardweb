@@ -17,8 +17,8 @@ Upload the NanoboardWeb project directory (including the `Dockerfile` and `serve
 
 For convenience, you can clone the repository directly if it's public:
 ```bash
-git clone https://github.com/3L1AS/nanoboardwebweb.git
-cd nanoboardwebweb
+git clone https://github.com/3L1AS/nanoboardweb.git
+cd nanoboardweb
 ```
 
 ### 2. Configure Docker Compose

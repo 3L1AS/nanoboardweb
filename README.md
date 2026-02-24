@@ -81,7 +81,7 @@ This compiles the TypeScript Node.js backend to `server/dist/` and builds the Re
 ## Project Structure
 
 ```
-nanoboardwebweb/
+nanoboardweb/
 ├── src/                    # React Frontend Source
 │   ├── components/         # Reusable UI components
 │   ├── pages/              # Page views
