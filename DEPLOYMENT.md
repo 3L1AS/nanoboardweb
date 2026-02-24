@@ -4,13 +4,13 @@ This guide explains how to deploy the NanoboardWeb web application using Docker,
 
 ## Prerequisites
 - **Docker** and **Docker Compose** installed on your Hostinger VPS.
-- Your Nanobot Docker image ready to be used.
+- Your **Nanobot container already running** independently on the VPS.
 
 ---
 
 ## Deployment Steps
 
-This approach uses Docker Compose to seamlessly connect NanoboardWeb to the Nanobot container, sharing volumes and docker socket permissions securely.
+This approach uses Docker Compose to run NanoboardWeb on its own. It seamlessly connects to your existing Nanobot container by sharing volumes and docker socket permissions securely.
 
 ### 1. Upload the Project
 Upload the NanoboardWeb project directory (including the `Dockerfile` and `server/` folder) to your VPS. 
@@ -31,17 +31,18 @@ nano docker-compose.yml
 
 Edit the `docker-compose.yml` to set your desired password and ensure the volume paths match your setup:
 - Change `NANOBOARDWEB_PASSWORD` to a secure password.
-- Ensure the volume `/root/.nanobot:/root/.nanobot` points to where you want the Bot's configuration and workspaces stored. This **must** be exactly the same path for both `nanoboardweb` and `nanobot` services in the file.
+- Ensure `NANOBOT_CONTAINER_NAME` exactly matches the name of your already running nanobot container (e.g., `nanobot`).
+- Ensure the volume `/root/.nanobot:/root/.nanobot` points to where you currently have the Bot's configuration and workspaces stored.
 
 ### 3. Build and Run
-Build the NanoboardWeb image and start both containers in the background:
+Build the NanoboardWeb image and start the container in the background:
 
 ```bash
 docker-compose up -d --build
 ```
 
 ### 4. Verify Success
-Check that both containers are running smoothly:
+Check that the dashboard container is running smoothly:
 ```bash
 docker-compose ps
 ```
