@@ -13,7 +13,7 @@ import { ContextMenu } from "./components/ContextMenu";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const token = localStorage.getItem('nanoboard_token');
+  const token = localStorage.getItem('nanoboardweb_token');
   if (!token) {
     return <Navigate to="/login" replace />;
   }

@@ -1,21 +1,21 @@
 version: '3.8'
 
 services:
-  nanoboard:
+  nanoboardweb:
     build: .
     # Or use a pre-built image if you publish one:
-    # image: freakz3z/nanoboard:latest
-    container_name: nanoboard
+    # image: freakz3z/nanoboardweb:latest
+    container_name: nanoboardweb
     restart: always
     ports:
       - "8080:8080"
     environment:
       # Password to log into the web dashboard
-      - NANOBOARD_PASSWORD=your_secure_password_here
+      - NANOBOARDWEB_PASSWORD=your_secure_password_here
       # Name of the nanobot container to control
       - NANOBOT_CONTAINER_NAME=nanobot
     volumes:
-      # Essential: Mount the host's Docker socket so Nanoboard can run `docker logs` and `docker restart`
+      # Essential: Mount the host's Docker socket so NanoboardWeb can run `docker logs` and `docker restart`
       - /var/run/docker.sock:/var/run/docker.sock
       # Essential: Mount the EXACT same generic volume as your nanobot container so you can edit config files
       - /root/.nanobot:/root/.nanobot
@@ -28,5 +28,5 @@ services:
     container_name: nanobot
     restart: always
     volumes:
-      # This mount path must match what Nanoboard sees above
+      # This mount path must match what NanoboardWeb sees above
       - /root/.nanobot:/root/.nanobot

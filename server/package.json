@@ -1,7 +1,7 @@
 {
-  "name": "nanoboard-server",
+  "name": "nanoboardweb-server",
   "version": "1.0.0",
-  "description": "Backend for Nanoboard web app",
+  "description": "Backend for NanoboardWeb web app",
   "main": "dist/index.js",
   "scripts": {
     "start": "node dist/index.js",

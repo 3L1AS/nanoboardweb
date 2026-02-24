@@ -47,7 +47,7 @@ app.get('*', (req, res) => {
 });
 
 // Socket.io for Realtime Logs
-const JWT_SECRET = process.env.JWT_SECRET || 'nanoboard_secret_key';
+const JWT_SECRET = process.env.JWT_SECRET || 'nanoboardweb_secret_key';
 
 io.use((socket, next) => {
     const token = socket.handshake.auth.token;

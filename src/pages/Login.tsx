@@ -16,7 +16,7 @@ export default function Login() {
 
         try {
             const { token } = await api.login(password);
-            localStorage.setItem('nanoboard_token', token);
+            localStorage.setItem('nanoboardweb_token', token);
             navigate('/');
         } catch (err: any) {
             setError(err.message || 'Login failed');
@@ -33,7 +33,7 @@ export default function Login() {
                         <KeyRound className="w-8 h-8" />
                     </div>
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                        Nanoboard
+                        NanoboardWeb
                     </h2>
                     <p className="text-gray-500 dark:text-gray-400 mt-2">
                         Enter your password to continue

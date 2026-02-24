@@ -1,12 +1,12 @@
 # 贡献指南
 
-感谢你有兴趣为 Nanoboard 做出贡献！我们欢迎所有形式的贡献。
+感谢你有兴趣为 NanoboardWeb 做出贡献！我们欢迎所有形式的贡献。
 
 ## 🤝 如何贡献
 
 ### 报告 Bug
 
-请通过 [GitHub Issues](https://github.com/Freakz3z/nanoboard/issues) 报告 bug，并提供以下信息：
+请通过 [GitHub Issues](https://github.com/Freakz3z/nanoboardweb/issues) 报告 bug，并提供以下信息：
 
 - **清晰的标题和描述** - 简明扼要地说明问题
 - **复现步骤** - 详细的步骤列表
@@ -14,7 +14,7 @@
 - **实际行为** - 实际发生了什么
 - **系统信息**
   - 操作系统和版本（如 macOS 14.0、Windows 11、Ubuntu 22.04）
-  - Nanoboard 版本
+  - NanoboardWeb 版本
   - Nanobot 版本（如适用）
 - **截图或录屏** - 如果是 UI 问题
 - **日志** - 相关的错误日志
@@ -38,7 +38,7 @@
 
 ### 环境信息
 - 操作系统: [如 macOS 14.0]
-- Nanoboard 版本: [如 v0.1.0]
+- NanoboardWeb 版本: [如 v0.1.0]
 - Nanobot 版本: [如 v1.0.0]
 
 ### 附加信息
@@ -79,14 +79,14 @@
 #### 2. 克隆你的 fork
 
 ```bash
-git clone https://github.com/你的用户名/nanoboard.git
-cd nanoboard
+git clone https://github.com/你的用户名/nanoboardweb.git
+cd nanoboardweb
 ```
 
 #### 3. 添加上游远程仓库
 
 ```bash
-git remote add upstream https://github.com/Freakz3z/nanoboard.git
+git remote add upstream https://github.com/Freakz3z/nanoboardweb.git
 ```
 
 #### 4. 创建特性分支
@@ -283,7 +283,7 @@ npm run lint
 
 1. 查看 [README](README.md)
 2. 阅读 [开发指南](DEVELOPMENT.md)
-3. 搜索 [已有 Issues](https://github.com/Freakz3z/nanoboard/issues)
+3. 搜索 [已有 Issues](https://github.com/Freakz3z/nanoboardweb/issues)
 4. 创建新的 Issue 进行讨论
 
 ## 📜 行为准则
@@ -318,8 +318,8 @@ npm run lint
 
 ## 🙏 致谢
 
-感谢你考虑为 Nanoboard 做出贡献！每一个贡献都让这个项目变得更好。
+感谢你考虑为 NanoboardWeb 做出贡献！每一个贡献都让这个项目变得更好。
 
 ---
 
-有问题？[创建一个 Issue](https://github.com/Freakz3z/nanoboard/issues)
+有问题？[创建一个 Issue](https://github.com/Freakz3z/nanoboardweb/issues)

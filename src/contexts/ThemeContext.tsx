@@ -10,7 +10,7 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-const THEME_STORAGE_KEY = "nanoboard_theme";
+const THEME_STORAGE_KEY = "nanoboardweb_theme";
 
 export function useTheme(): ThemeContextType {
   const context = useContext(ThemeContext);

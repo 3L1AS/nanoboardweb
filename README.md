@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="public/assets/logo_nanoboard.png" alt="Nanoboard Logo">
+<img src="public/assets/logo_nanoboardweb.png" alt="NanoboardWeb Logo">
 
-# Nanoboard Web
+# NanoboardWeb Web
 
 A lightweight, web-based management dashboard for Nanobot.
 
@@ -29,15 +29,15 @@ A lightweight, web-based management dashboard for Nanobot.
 
 ## Quick Start (Docker Deployment)
 
-The easiest way to run Nanoboard Web is via Docker Compose, running it directly alongside your Nanobot instance.
+The easiest way to run NanoboardWeb Web is via Docker Compose, running it directly alongside your Nanobot instance.
 
 ### 1. Configure Docker Compose
 Create a `docker-compose.yml` file. You can find an example template in `docker-compose.example.yml`.
 
 Ensure that:
-- Your `NANOBOARD_PASSWORD` is set to a secure password.
-- Both `nanoboard` and `nanobot` services mount the exact same volume (e.g., `/root/.nanobot:/root/.nanobot`).
-- The docker socket `/var/run/docker.sock` is mounted so Nanoboard can control the Nanobot container.
+- Your `NANOBOARDWEB_PASSWORD` is set to a secure password.
+- Both `nanoboardweb` and `nanobot` services mount the exact same volume (e.g., `/root/.nanobot:/root/.nanobot`).
+- The docker socket `/var/run/docker.sock` is mounted so NanoboardWeb can control the Nanobot container.
 
 ### 2. Start Services
 ```bash
@@ -81,7 +81,7 @@ This compiles the TypeScript Node.js backend to `server/dist/` and builds the Re
 ## Project Structure
 
 ```
-nanoboardweb/
+nanoboardwebweb/
 ├── src/                    # React Frontend Source
 │   ├── components/         # Reusable UI components
 │   ├── pages/              # Page views
@@ -103,5 +103,5 @@ nanoboardweb/
 
 ## Acknowledgements
 - Migrated to Web by [3L1AS](https://github.com/3L1AS).
-- Originally the Tauri desktop app created by [Freakz3z](https://github.com/Freakz3z/nanoboard).
+- Originally the Tauri desktop app created by [Freakz3z](https://github.com/Freakz3z/nanoboardweb).
 - Built to manage [nanobot](https://github.com/HKUDS/nanobot).

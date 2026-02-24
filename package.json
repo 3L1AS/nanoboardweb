@@ -1,5 +1,5 @@
 {
-  "name": "nanoboard",
+  "name": "nanoboardweb",
   "version": "0.2.5",
   "description": "A modern web dashboard for managing Nanobot AI assistant",
   "author": "3L1AS",
@@ -8,11 +8,11 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/3L1AS/nanoboardweb.git"
+    "url": "https://github.com/3L1AS/nanoboardwebweb.git"
   },
-  "homepage": "https://github.com/3L1AS/nanoboardweb#readme",
+  "homepage": "https://github.com/3L1AS/nanoboardwebweb#readme",
   "bugs": {
-    "url": "https://github.com/3L1AS/nanoboardweb/issues"
+    "url": "https://github.com/3L1AS/nanoboardwebweb/issues"
   },
   "scripts": {
     "dev": "vite",

@@ -18,12 +18,12 @@ import type { DiagnosticResult } from "@/types";
 
 // 应用信息
 const APP_INFO = {
-  name: "nanoboard",
+  name: "nanoboardweb",
   version: "0.2.5",
   description: "一个极轻量化 nanobot Tauri 管理助手",
   descriptionEn: "An Ultra-lightweight nanobot Tauri Management Assistant",
-  github: "https://github.com/Freakz3z/nanoboard",
-  releasesApi: "https://api.github.com/repos/Freakz3z/nanoboard/releases/latest",
+  github: "https://github.com/Freakz3z/nanoboardweb",
+  releasesApi: "https://api.github.com/repos/Freakz3z/nanoboardweb/releases/latest",
 };
 
 interface SystemInfoData {

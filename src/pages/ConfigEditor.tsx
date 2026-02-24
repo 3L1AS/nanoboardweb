@@ -54,8 +54,8 @@ import HistoryPanel from "@/components/config/HistoryPanel";
 import CodeEditorView from "@/components/config/CodeEditorView";
 
 const TEMPLATES_STORAGE_KEY = "nanobot_config_templates";
-const PROVIDER_AGENT_CONFIGS_KEY = "nanoboard_provider_agent_configs";
-const MCP_SERVERS_STORAGE_KEY = "nanoboard_mcp_servers";
+const PROVIDER_AGENT_CONFIGS_KEY = "nanoboardweb_provider_agent_configs";
+const MCP_SERVERS_STORAGE_KEY = "nanoboardweb_mcp_servers";
 
 // MCP Server 配置（包含 disabled 字段用于 UI 状态管理）
 interface McpServerWithState extends McpServer {

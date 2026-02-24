@@ -5,14 +5,14 @@ dotenv.config();
 
 export const authRouter = Router();
 
-export const JWT_SECRET = process.env.JWT_SECRET || 'nanoboard_secret_key';
+export const JWT_SECRET = process.env.JWT_SECRET || 'nanoboardweb_secret_key';
 
 authRouter.post('/login', (req: Request, res: Response) => {
     const { password } = req.body;
-    const configuredPassword = process.env.NANOBOARD_PASSWORD;
+    const configuredPassword = process.env.NANOBOARDWEB_PASSWORD;
 
     if (!configuredPassword) {
-        return res.status(500).json({ error: 'NANOBOARD_PASSWORD not configured on server' });
+        return res.status(500).json({ error: 'NANOBOARDWEB_PASSWORD not configured on server' });
     }
 
     if (password === configuredPassword) {

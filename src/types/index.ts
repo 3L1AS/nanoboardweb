@@ -1,5 +1,5 @@
 /**
- * Nanoboard 类型定义
+ * NanoboardWeb 类型定义
  * 集中管理前后端通信的数据类型
  */
 
