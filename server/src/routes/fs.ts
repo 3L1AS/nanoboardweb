@@ -24,11 +24,19 @@ fsRouter.get('/tree', (req: Request, res: Response) => {
         }
 
         const items = fs.readdirSync(targetPath, { withFileTypes: true });
-        const result = items.map(item => ({
-            name: item.name,
-            isDirectory: item.isDirectory(),
-            path: path.join(relativePath, item.name).replace(/\\/g, '/')
-        }));
+        const result = [];
+        for (const item of items) {
+            const itemPath = path.join(targetPath, item.name);
+            const stat = fs.statSync(itemPath);
+            result.push({
+                name: item.name,
+                type: stat.isDirectory() ? 'directory' : 'file',
+                path: itemPath,
+                size: stat.size,
+                modified: Math.floor(stat.mtimeMs / 1000),
+                relative_path: path.join(relativePath, item.name).replace(/\\/g, '/')
+            });
+        }
 
         res.json({ success: true, path: relativePath, items: result });
     } catch (error) {
