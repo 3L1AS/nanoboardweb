@@ -1,0 +1,118 @@
+import { Router, Request, Response } from 'express';
+import { authenticateJWT } from '../middlewares/auth';
+import fs from 'fs';
+import path from 'path';
+import { execFile } from 'child_process';
+import util from 'util';
+
+const execFilePromise = util.promisify(execFile);
+export const cronRouter = Router();
+
+const NANOBOT_DIR = process.env.NANOBOT_DIR || './test_volume';
+const CRON_DIR = path.join(NANOBOT_DIR, 'cron');
+const JOBS_FILE = path.join(CRON_DIR, 'jobs.json');
+
+cronRouter.use(authenticateJWT);
+
+cronRouter.get('/list', (req: Request, res: Response) => {
+    try {
+        if (!fs.existsSync(JOBS_FILE)) {
+            return res.json({ success: true, jobs: [] });
+        }
+        const data = fs.readFileSync(JOBS_FILE, 'utf8');
+        res.json(JSON.parse(data));
+    } catch (error) {
+        res.status(500).json({ error: String(error) });
+    }
+});
+
+cronRouter.post('/add', (req: Request, res: Response) => {
+    try {
+        const { job } = req.body;
+
+        // Ensure dir exists
+        fs.mkdirSync(CRON_DIR, { recursive: true });
+
+        let data: any = { success: true, jobs: [] };
+        if (fs.existsSync(JOBS_FILE)) {
+            data = JSON.parse(fs.readFileSync(JOBS_FILE, 'utf8'));
+        }
+
+        job.id = `job_${Date.now()}`;
+        data.jobs.push(job);
+
+        fs.writeFileSync(JOBS_FILE, JSON.stringify(data, null, 2), 'utf8');
+        res.json({ success: true, job });
+    } catch (error) {
+        res.status(500).json({ error: String(error) });
+    }
+});
+
+cronRouter.post('/update', (req: Request, res: Response) => {
+    try {
+        const { job } = req.body;
+
+        if (fs.existsSync(JOBS_FILE)) {
+            const data = JSON.parse(fs.readFileSync(JOBS_FILE, 'utf8'));
+            const index = data.jobs.findIndex((j: any) => j.id === job.id);
+            if (index !== -1) {
+                data.jobs[index] = { ...data.jobs[index], ...job };
+                fs.writeFileSync(JOBS_FILE, JSON.stringify(data, null, 2), 'utf8');
+                return res.json({ success: true, job: data.jobs[index] });
+            }
+        }
+
+        res.status(404).json({ error: 'Job not found' });
+    } catch (error) {
+        res.status(500).json({ error: String(error) });
+    }
+});
+
+cronRouter.post('/remove', (req: Request, res: Response) => {
+    try {
+        const { id } = req.body;
+
+        if (fs.existsSync(JOBS_FILE)) {
+            const data = JSON.parse(fs.readFileSync(JOBS_FILE, 'utf8'));
+            data.jobs = data.jobs.filter((j: any) => j.id !== id);
+            fs.writeFileSync(JOBS_FILE, JSON.stringify(data, null, 2), 'utf8');
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: String(error) });
+    }
+});
+
+cronRouter.post('/enable', (req: Request, res: Response) => {
+    try {
+        const { id, disable } = req.body;
+
+        if (fs.existsSync(JOBS_FILE)) {
+            const data = JSON.parse(fs.readFileSync(JOBS_FILE, 'utf8'));
+            const job = data.jobs.find((j: any) => j.id === id);
+            if (job) {
+                job.enabled = !disable;
+                fs.writeFileSync(JOBS_FILE, JSON.stringify(data, null, 2), 'utf8');
+            }
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: String(error) });
+    }
+});
+
+cronRouter.post('/run', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.body;
+        const CONTAINER_NAME = process.env.NANOBOT_CONTAINER_NAME || 'nanobot';
+
+        // Let the actual Nanobot execute the cron job immediately via docker exec
+        await execFilePromise('docker', ['exec', CONTAINER_NAME, 'python', '-m', 'nanobot.cron', '--run', id]);
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: String(error) });
+    }
+});
