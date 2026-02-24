@@ -24,7 +24,7 @@ services:
 
   nanobot:
     # Replace with your actual nanobot image
-    image: 3l1as/nanobot:latest
+    image: hkuds/nanobot:latest
     container_name: nanobot
     restart: always
     volumes:
