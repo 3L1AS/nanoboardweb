@@ -57,3 +57,16 @@ Open your web browser and navigate to:
 `http://<YOUR_VPS_IP>:8080`
 
 Log in using the password you set as `NANOBOARDWEB_PASSWORD`. From here, you can start, stop, view logs, and configure the Nanobot entirely via the web interface.
+
+---
+
+## Troubleshooting
+
+### `KeyError: 'ContainerConfig'` during rebuild
+If you see an error like `ERROR: for nanoboardweb 'ContainerConfig'` followed by a Python traceback referencing `docker-compose`, this is a known bug in older versions of `docker-compose` (like v1.29) when attempting to rebuild images over existing containers.
+
+**Solution:** Delete the running container first before rebuilding:
+```bash
+docker rm -f nanoboardweb
+docker-compose up -d --build
+```
