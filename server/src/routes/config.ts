@@ -5,8 +5,7 @@ import path from 'path';
 
 export const configRouter = Router();
 
-// We expect NANOBOT_DIR to be mounted to the app root in Docker 
-// so config.json is likely at NANOBOT_DIR/.nanobot/config.json
+// The docker-compose mounts `/root/.nanobot` directly to `NANOBOT_DIR`
 const NANOBOT_DIR = process.env.NANOBOT_DIR || './test_volume';
 const CONFIG_PATH = path.join(NANOBOT_DIR, 'config.json');
 

@@ -14,13 +14,14 @@ services:
       - NANOBOARDWEB_PASSWORD=your_secure_password_here
       # Name of the nanobot container to control
       - NANOBOT_CONTAINER_NAME=nanobot
+      # Path to the mounted volume where configs and workspaces live inside this container
+      - NANOBOT_DIR=/root/.nanobot
     volumes:
       # Essential: Mount the host's Docker socket so NanoboardWeb can run `docker logs` and `docker restart`
       - /var/run/docker.sock:/var/run/docker.sock
       # Essential: Mount the EXACT same generic volume as your nanobot container so you can edit config files
       - /root/.nanobot:/root/.nanobot
     # OPTIONAL: If your existing Nanobot container runs on a specific custom Docker network
-    # and you want this dashboard to join that exact same network / project, uncomment below:
     # networks:
     #   - nanobot_network
 

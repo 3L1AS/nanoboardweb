@@ -11,6 +11,10 @@ import { authRouter } from './routes/auth';
 import { processRouter } from './routes/process';
 import { systemRouter } from './routes/system';
 import { fsRouter } from './routes/fs';
+import { configRouter } from './routes/config';
+import { sessionRouter } from './routes/session';
+import { skillRouter } from './routes/skill';
+import { cronRouter } from './routes/cron';
 
 dotenv.config();
 
@@ -34,6 +38,10 @@ app.use('/api/auth', authRouter);
 app.use('/api/process', processRouter);
 app.use('/api/system', systemRouter);
 app.use('/api/fs', fsRouter);
+app.use('/api/config', configRouter);
+app.use('/api/session', sessionRouter);
+app.use('/api/skill', skillRouter);
+app.use('/api/cron', cronRouter);
 
 // Serve static frontend files (after building Vite app)
 const frontendPath = path.join(__dirname, '../../dist');

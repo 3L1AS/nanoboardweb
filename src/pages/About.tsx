@@ -20,8 +20,8 @@ import type { DiagnosticResult } from "@/types";
 const APP_INFO = {
   name: "nanoboardweb",
   version: "0.2.5",
-  description: "一个极轻量化 nanobot Tauri 管理助手",
-  descriptionEn: "An Ultra-lightweight nanobot Tauri Management Assistant",
+  description: "一个极轻量化 nanobot Web 管理面板",
+  descriptionEn: "An Ultra-lightweight nanobot Web Dashboard",
   github: "https://github.com/3L1AS/nanoboardweb",
   releasesApi: "https://api.github.com/repos/3L1AS/nanoboardweb/releases/latest",
 };
@@ -270,10 +270,10 @@ export default function About() {
             </h3>
             <div className="space-y-2">
               {[
-                { label: t("dashboard.configFileLocation"), value: "~/.nanobot/config.json" },
-                { label: t("dashboard.workspaceLocation"), value: "~/.nanobot/workspace" },
-                { label: t("dashboard.logLocation"), value: "~/.nanobot/logs/nanobot.log" },
-                { label: t("about.cronJobsLocation"), value: "~/.nanobot/cron/jobs.json" },
+                { label: t("dashboard.configFileLocation"), value: "/root/.nanobot/config.json" },
+                { label: t("dashboard.workspaceLocation"), value: "/root/.nanobot/workspace" },
+                { label: t("dashboard.logLocation"), value: "/root/.nanobot/logs/nanobot.log" },
+                { label: t("about.cronJobsLocation"), value: "/root/.nanobot/cron/jobs.json" },
               ].map((item, index) => (
                 <div
                   key={index}
@@ -379,8 +379,8 @@ function DiagnosticResultPanel({
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-gray-900 dark:text-dark-text-primary">{getCheckName(check)}</p>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${check.status === "ok" ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" :
-                    check.status === "warning" ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400" :
-                      "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+                  check.status === "warning" ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400" :
+                    "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
                   }`}>
                   {check.status === "ok" ? t("dashboard.normal") : check.status === "warning" ? t("dashboard.warning") : t("dashboard.error")}
                 </span>
