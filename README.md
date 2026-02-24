@@ -1,8 +1,6 @@
 <div align="center">
 
-<img src="public/assets/logo_nanoboardweb.png" alt="NanoboardWeb Logo">
-
-# NanoboardWeb Web
+# NanoboardWeb
 
 A lightweight, web-based management dashboard for Nanobot.
 
