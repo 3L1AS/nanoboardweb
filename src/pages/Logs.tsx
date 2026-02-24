@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { loggerApi, events } from "../lib/tauri";
+import { loggerApi, events } from "../lib/api";
 import { useToast } from "../contexts/ToastContext";
 import { Play, Square, Search, X, Inbox, Download, BarChart3, Regex } from "lucide-react";
 import EmptyState from "../components/EmptyState";
@@ -413,18 +413,16 @@ export default function Logs() {
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder={useRegex ? t("logs.searchWithRegex") : t("logs.searchLogs")}
-            className={`w-full pl-10 pr-24 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted transition-colors duration-200 ${
-              regexError ? "border-red-300 dark:border-red-500/50" : "border-gray-200 dark:border-dark-border-subtle"
-            }`}
+            className={`w-full pl-10 pr-24 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted transition-colors duration-200 ${regexError ? "border-red-300 dark:border-red-500/50" : "border-gray-200 dark:border-dark-border-subtle"
+              }`}
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
             <button
               onClick={toggleRegexMode}
-              className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors text-xs font-medium ${
-                useRegex
+              className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors text-xs font-medium ${useRegex
                   ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50"
                   : "bg-gray-100 dark:bg-dark-bg-hover text-gray-600 dark:text-dark-text-secondary hover:bg-gray-200 dark:hover:bg-dark-bg-active"
-              }`}
+                }`}
               title={t("logs.toggleSearchMode", { mode: useRegex ? t("logs.normalSearch") : t("logs.regexSearch") })}
             >
               <Regex className="w-3.5 h-3.5" />
@@ -455,51 +453,46 @@ export default function Logs() {
             <div className="flex gap-1">
               <button
                 onClick={() => handleLevelChange("all")}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  logLevel === "all"
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${logLevel === "all"
                     ? "bg-gray-800 dark:bg-dark-text-primary text-white"
                     : "bg-gray-100 dark:bg-dark-bg-hover text-gray-600 dark:text-dark-text-secondary hover:bg-gray-200 dark:hover:bg-dark-bg-active"
-                }`}
+                  }`}
               >
                 {t("logs.all")}
               </button>
               <button
                 onClick={() => handleLevelChange("info")}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  logLevel === "info"
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${logLevel === "info"
                     ? "bg-blue-600 text-white"
                     : "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50"
-                }`}
+                  }`}
               >
                 INFO
               </button>
               <button
                 onClick={() => handleLevelChange("debug")}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  logLevel === "debug"
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${logLevel === "debug"
                     ? "bg-gray-600 text-white"
                     : "bg-gray-50 dark:bg-dark-bg-hover text-gray-600 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-bg-active"
-                }`}
+                  }`}
               >
                 DEBUG
               </button>
               <button
                 onClick={() => handleLevelChange("warn")}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  logLevel === "warn"
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${logLevel === "warn"
                     ? "bg-amber-600 text-white"
                     : "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/50"
-                }`}
+                  }`}
               >
                 WARN
               </button>
               <button
                 onClick={() => handleLevelChange("error")}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  logLevel === "error"
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${logLevel === "error"
                     ? "bg-red-600 text-white"
                     : "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50"
-                }`}
+                  }`}
               >
                 ERROR
               </button>
@@ -510,11 +503,10 @@ export default function Logs() {
           <div className="flex items-center gap-2 ml-auto">
             <button
               onClick={() => setShowStatistics(!showStatistics)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium ${
-                showStatistics
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium ${showStatistics
                   ? "bg-blue-600 text-white hover:bg-blue-700"
                   : "bg-gray-100 dark:bg-dark-bg-hover text-gray-700 dark:text-dark-text-primary hover:bg-gray-200 dark:hover:bg-dark-bg-active"
-              }`}
+                }`}
             >
               <BarChart3 className="w-4 h-4" />
               {t("logs.statistics")}
@@ -531,11 +523,10 @@ export default function Logs() {
             <button
               onClick={toggleStream}
               disabled={loading}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium text-white ${
-                streaming
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium text-white ${streaming
                   ? "bg-red-600 hover:bg-red-700"
                   : "bg-green-600 hover:bg-green-700"
-              } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+                } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               {streaming ? (
                 <>

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { processApi } from "../lib/tauri";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { processApi } from "../lib/api";
 import {
   Github,
   Monitor,
@@ -143,7 +142,7 @@ export default function About() {
                 </span>
                 {updateStatus === "available" && latestVersion && (
                   <button
-                    onClick={() => openUrl(`${APP_INFO.github}/releases/latest`)}
+                    onClick={() => window.open(`${APP_INFO.github}/releases/latest`, '_blank')}
                     className="flex items-center gap-1.5 px-2 py-0.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-medium rounded-full hover:from-purple-600 hover:to-pink-600 transition-all cursor-pointer animate-pulse"
                   >
                     <Sparkles className="w-3 h-3" />
@@ -157,7 +156,7 @@ export default function About() {
                   </span>
                 )}
                 <button
-                  onClick={() => openUrl(APP_INFO.github)}
+                  onClick={() => window.open(APP_INFO.github, '_blank')}
                   className="p-2 bg-gray-100 dark:bg-dark-bg-sidebar hover:bg-gray-200 dark:hover:bg-dark-bg-hover rounded-full transition-colors cursor-pointer"
                   title="GitHub"
                 >
@@ -379,11 +378,10 @@ function DiagnosticResultPanel({
             <div className="flex-1">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-gray-900 dark:text-dark-text-primary">{getCheckName(check)}</p>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  check.status === "ok" ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" :
-                  check.status === "warning" ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400" :
-                  "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
-                }`}>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${check.status === "ok" ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" :
+                    check.status === "warning" ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400" :
+                      "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+                  }`}>
                   {check.status === "ok" ? t("dashboard.normal") : check.status === "warning" ? t("dashboard.warning") : t("dashboard.error")}
                 </span>
               </div>

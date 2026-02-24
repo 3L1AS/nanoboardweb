@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { fsApi, sessionApi, skillApi, chatSessionApi, cronApi } from "../lib/tauri";
+import { fsApi, sessionApi, skillApi, chatSessionApi, cronApi } from "../lib/api";
 import { useToast } from "../contexts/ToastContext";
 import {
   FileText,
@@ -225,7 +225,7 @@ export default function Workspace() {
     isOpen: false,
     title: "",
     message: "",
-    onConfirm: () => {},
+    onConfirm: () => { },
   });
 
   // ============== 初始化加载 ==============
@@ -745,8 +745,8 @@ export default function Workspace() {
       cronForm.scheduleType === "cron"
         ? getCronExpression()
         : cronForm.scheduleType === "at"
-        ? cronForm.atTime
-        : cronForm.everySeconds;
+          ? cronForm.atTime
+          : cronForm.everySeconds;
 
     if (!scheduleValue.trim()) {
       toast.showError(t("workspace.cronScheduleRequired"));
@@ -1026,10 +1026,10 @@ export default function Workspace() {
         unit === "m"
           ? val * 60
           : unit === "h"
-          ? val * 3600
-          : unit === "d"
-          ? val * 86400
-          : val;
+            ? val * 3600
+            : unit === "d"
+              ? val * 86400
+              : val;
     } else {
       s = parseInt(schedule, 10);
     }
@@ -1076,7 +1076,7 @@ export default function Workspace() {
       isOpen: false,
       title: "",
       message: "",
-      onConfirm: () => {},
+      onConfirm: () => { },
     });
   }
 
@@ -1191,55 +1191,50 @@ export default function Workspace() {
             <div className="flex items-center bg-gray-100 dark:bg-dark-bg-sidebar rounded-lg p-1">
               <button
                 onClick={() => setActiveTab("files")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === "files"
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === "files"
                     ? "bg-white dark:bg-dark-bg-card text-blue-600 dark:text-blue-400 shadow-sm"
                     : "text-gray-600 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-text-primary"
-                }`}
+                  }`}
               >
                 <FolderTree className="w-4 h-4" />
                 {t("workspace.filesTab")}
               </button>
               <button
                 onClick={() => setActiveTab("skills")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === "skills"
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === "skills"
                     ? "bg-white dark:bg-dark-bg-card text-blue-600 dark:text-blue-400 shadow-sm"
                     : "text-gray-600 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-text-primary"
-                }`}
+                  }`}
               >
                 <Wrench className="w-4 h-4" />
                 {t("workspace.skillsTab")}
               </button>
               <button
                 onClick={() => setActiveTab("memory")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === "memory"
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === "memory"
                     ? "bg-white dark:bg-dark-bg-card text-purple-600 dark:text-purple-400 shadow-sm"
                     : "text-gray-600 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-text-primary"
-                }`}
+                  }`}
               >
                 <Brain className="w-4 h-4" />
                 {t("workspace.memoryTab")}
               </button>
               <button
                 onClick={() => setActiveTab("sessions")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === "sessions"
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === "sessions"
                     ? "bg-white dark:bg-dark-bg-card text-green-600 dark:text-green-400 shadow-sm"
                     : "text-gray-600 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-text-primary"
-                }`}
+                  }`}
               >
                 <MessageSquare className="w-4 h-4" />
                 {t("workspace.sessionsTab")}
               </button>
               <button
                 onClick={() => setActiveTab("cron")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === "cron"
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === "cron"
                     ? "bg-white dark:bg-dark-bg-card text-amber-600 dark:text-amber-400 shadow-sm"
                     : "text-gray-600 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-text-primary"
-                }`}
+                  }`}
               >
                 <CalendarClock className="w-4 h-4" />
                 {t("workspace.cronTab")}
@@ -1281,11 +1276,10 @@ export default function Workspace() {
                             loadFileContentAction(item);
                           }
                         }}
-                        className={`group flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                          selectedItem?.relative_path === item.relative_path
+                        className={`group flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${selectedItem?.relative_path === item.relative_path
                             ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                             : "border-gray-200 dark:border-dark-border-subtle hover:border-gray-300 dark:hover:border-dark-border-default hover:bg-gray-50 dark:hover:bg-dark-bg-hover"
-                        }`}
+                          }`}
                       >
                         <div className="flex-shrink-0">
                           {item.type === "directory" ? (
@@ -1340,11 +1334,10 @@ export default function Workspace() {
                       <div
                         key={skill.id}
                         onClick={() => selectSkillAction(skill)}
-                        className={`group flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                          selectedSkill?.id === skill.id
+                        className={`group flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${selectedSkill?.id === skill.id
                             ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                             : "border-gray-200 dark:border-dark-border-subtle hover:border-gray-300 dark:hover:border-dark-border-default hover:bg-gray-50 dark:hover:bg-dark-bg-hover"
-                        } ${!skill.enabled ? "opacity-60" : ""}`}
+                          } ${!skill.enabled ? "opacity-60" : ""}`}
                       >
                         <div className="flex-shrink-0">
                           <FileText className={`w-5 h-5 ${skill.enabled ? "text-blue-500 dark:text-blue-400" : "text-gray-400"}`} />
@@ -1354,11 +1347,10 @@ export default function Workspace() {
                             <h3 className="font-medium text-gray-900 dark:text-dark-text-primary truncate text-sm">
                               {skill.title || skill.name}
                             </h3>
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${
-                              skill.enabled
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${skill.enabled
                                 ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
                                 : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
-                            }`}>
+                              }`}>
                               {skill.enabled ? t("workspace.enabled") : t("workspace.disabled")}
                             </span>
                           </div>
@@ -1403,11 +1395,10 @@ export default function Workspace() {
                       <div
                         key={memory.id}
                         onClick={() => selectMemoryAction(memory)}
-                        className={`group flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                          selectedMemory?.id === memory.id
+                        className={`group flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${selectedMemory?.id === memory.id
                             ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20"
                             : "border-gray-200 dark:border-dark-border-subtle hover:border-gray-300 dark:hover:border-dark-border-default hover:bg-gray-50 dark:hover:bg-dark-bg-hover"
-                        }`}
+                          }`}
                       >
                         <div className="flex-shrink-0">
                           <FileText className="w-5 h-5 text-purple-500 dark:text-purple-400" />
@@ -1451,11 +1442,10 @@ export default function Workspace() {
                       <div
                         key={session.id}
                         onClick={() => selectChatSessionAction(session)}
-                        className={`group flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                          selectedChatSession?.id === session.id
+                        className={`group flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${selectedChatSession?.id === session.id
                             ? "border-green-500 bg-green-50 dark:bg-green-900/20"
                             : "border-gray-200 dark:border-dark-border-subtle hover:border-gray-300 dark:hover:border-dark-border-default hover:bg-gray-50 dark:hover:bg-dark-bg-hover"
-                        }`}
+                          }`}
                       >
                         <div className="flex-shrink-0">
                           <MessageSquare className="w-5 h-5 text-green-500 dark:text-green-400" />
@@ -1505,26 +1495,23 @@ export default function Workspace() {
                         return (
                           <div
                             key={job.id || idx}
-                            className={`group rounded-lg border transition-all hover:shadow-md ${
-                              isEnabled
+                            className={`group rounded-lg border transition-all hover:shadow-md ${isEnabled
                                 ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-500/50"
                                 : "bg-white dark:bg-dark-bg-card border-gray-200 dark:border-dark-border-subtle hover:border-gray-300 dark:hover:border-dark-border-default opacity-80 hover:opacity-100"
-                            }`}
+                              }`}
                           >
                             <div className="p-3">
                               {/* 上部：图标 + 名称 + 状态 */}
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                                  <div className={`p-1.5 rounded-lg flex-shrink-0 ${
-                                    isEnabled
+                                  <div className={`p-1.5 rounded-lg flex-shrink-0 ${isEnabled
                                       ? "bg-green-100 dark:bg-green-800/40"
                                       : "bg-gray-100 dark:bg-dark-bg-hover"
-                                  }`}>
-                                    <CalendarClock className={`w-4 h-4 ${
-                                      isEnabled
+                                    }`}>
+                                    <CalendarClock className={`w-4 h-4 ${isEnabled
                                         ? "text-green-600 dark:text-green-400"
                                         : "text-gray-500 dark:text-dark-text-muted"
-                                    }`} />
+                                      }`} />
                                   </div>
                                   <div className="min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
@@ -1547,11 +1534,10 @@ export default function Workspace() {
                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0">
                                   <button
                                     onClick={() => toggleCronJobEnabled(job)}
-                                    className={`p-1 rounded-md transition-colors ${
-                                      isEnabled
+                                    className={`p-1 rounded-md transition-colors ${isEnabled
                                         ? "text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                                         : "text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-bg-hover"
-                                    }`}
+                                      }`}
                                     title={isEnabled ? t("workspace.disable") : t("workspace.enable")}
                                   >
                                     {isEnabled ? (
@@ -1579,16 +1565,14 @@ export default function Workspace() {
 
                               {/* 调度信息 */}
                               <div className="flex items-center gap-2 mb-1.5">
-                                <Timer className={`w-3 h-3 flex-shrink-0 ${
-                                  isEnabled
+                                <Timer className={`w-3 h-3 flex-shrink-0 ${isEnabled
                                     ? "text-green-500 dark:text-green-400"
                                     : "text-gray-400 dark:text-dark-text-muted"
-                                }`} />
-                                <span className={`text-xs font-medium truncate ${
-                                  isEnabled
+                                  }`} />
+                                <span className={`text-xs font-medium truncate ${isEnabled
                                     ? "text-green-700 dark:text-green-300"
                                     : "text-gray-600 dark:text-dark-text-secondary"
-                                }`}>
+                                  }`}>
                                   {scheduleDesc}
                                 </span>
                                 {job.schedule?.kind === "cron" && job.schedule.expr && (
@@ -1956,11 +1940,10 @@ export default function Workspace() {
           <div className="flex items-center gap-1 text-sm">
             <button
               onClick={() => loadDirectory("")}
-              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${
-                !currentPath || currentPath === "/"
+              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${!currentPath || currentPath === "/"
                   ? "text-gray-900 dark:text-dark-text-primary font-medium"
                   : "text-gray-600 dark:text-dark-text-secondary hover:bg-gray-200 dark:hover:bg-dark-bg-hover"
-              }`}
+                }`}
             >
               <Home className="w-4 h-4" />
               {t("workspace.workspaceRoot")}
@@ -1970,11 +1953,10 @@ export default function Workspace() {
                 <ChevronRight className="w-4 h-4 text-gray-400 dark:text-dark-text-muted" />
                 <button
                   onClick={() => loadDirectory(crumb.path)}
-                  className={`px-2 py-1 rounded transition-colors ${
-                    index === getFileBreadcrumbs().length - 1
+                  className={`px-2 py-1 rounded transition-colors ${index === getFileBreadcrumbs().length - 1
                       ? "text-gray-900 dark:text-dark-text-primary font-medium"
                       : "text-gray-600 dark:text-dark-text-secondary hover:bg-gray-200 dark:hover:bg-dark-bg-hover"
-                  }`}
+                    }`}
                 >
                   {crumb.name}
                 </button>
@@ -1991,9 +1973,8 @@ export default function Workspace() {
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
                 <div
-                  className={`p-2 rounded-lg ${
-                    editingCronJob ? "bg-amber-50 dark:bg-amber-900/30" : "bg-blue-50 dark:bg-blue-900/30"
-                  }`}
+                  className={`p-2 rounded-lg ${editingCronJob ? "bg-amber-50 dark:bg-amber-900/30" : "bg-blue-50 dark:bg-blue-900/30"
+                    }`}
                 >
                   {editingCronJob ? (
                     <Pencil className="w-5 h-5 text-amber-600 dark:text-amber-400" />
@@ -2054,33 +2035,30 @@ export default function Workspace() {
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => setCronForm({ ...cronForm, scheduleType: "cron" })}
-                    className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                      cronForm.scheduleType === "cron"
+                    className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${cronForm.scheduleType === "cron"
                         ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400"
                         : "border-gray-200 dark:border-dark-border-subtle text-gray-600 dark:text-dark-text-muted hover:border-gray-300"
-                    }`}
+                      }`}
                   >
                     <CalendarClock className="w-4 h-4" />
                     Cron
                   </button>
                   <button
                     onClick={() => setCronForm({ ...cronForm, scheduleType: "every" })}
-                    className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                      cronForm.scheduleType === "every"
+                    className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${cronForm.scheduleType === "every"
                         ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400"
                         : "border-gray-200 dark:border-dark-border-subtle text-gray-600 dark:text-dark-text-muted hover:border-gray-300"
-                    }`}
+                      }`}
                   >
                     <Clock className="w-4 h-4" />
                     {t("workspace.cronInterval")}
                   </button>
                   <button
                     onClick={() => setCronForm({ ...cronForm, scheduleType: "at" })}
-                    className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                      cronForm.scheduleType === "at"
+                    className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${cronForm.scheduleType === "at"
                         ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400"
                         : "border-gray-200 dark:border-dark-border-subtle text-gray-600 dark:text-dark-text-muted hover:border-gray-300"
-                    }`}
+                      }`}
                   >
                     <Timer className="w-4 h-4" />
                     {t("workspace.cronRunOnce")}
@@ -2235,8 +2213,8 @@ export default function Workspace() {
                     ? t("workspace.cronSaving")
                     : t("workspace.cronAdding")
                   : editingCronJob
-                  ? t("workspace.cronSave")
-                  : t("workspace.cronConfirm")}
+                    ? t("workspace.cronSave")
+                    : t("workspace.cronConfirm")}
               </button>
             </div>
           </div>

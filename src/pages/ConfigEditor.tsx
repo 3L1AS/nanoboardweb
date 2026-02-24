@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { configApi } from "../lib/tauri";
 import { useToast } from "../contexts/ToastContext";
 import {
   ChevronDown,
@@ -45,7 +44,7 @@ import type {
   McpServer,
 } from "@/config/types";
 import { AVAILABLE_PROVIDERS, isProviderConfigured, isOAuthProvider } from "@/config/providers";
-import { processApi } from "@/lib/tauri";
+import { processApi, configApi } from "@/lib/api";
 import { CHANNELS_CONFIG } from "@/config/channels";
 import { formatTimestamp } from "@/utils/format";
 import ProviderEditModal from "@/components/config/ProviderEditModal";
@@ -120,7 +119,7 @@ export default function ConfigEditor() {
     title: string;
     message: string;
     onConfirm: () => void;
-  }>({ isOpen: false, title: "", message: "", onConfirm: () => {} });
+  }>({ isOpen: false, title: "", message: "", onConfirm: () => { } });
   const [showTemplates, setShowTemplates] = useState(false);
   const [templates, setTemplates] = useState<ConfigTemplate[]>([]);
   const [templateDialog, setTemplateDialog] = useState<{
@@ -227,7 +226,7 @@ export default function ConfigEditor() {
           }
         }
         setMcpServersConfig(mergedMcpConfig);
-        }
+      }
     } catch (error) {
       toast.showError(t("config.loadConfigFailed"));
     } finally {
@@ -802,7 +801,7 @@ export default function ConfigEditor() {
         } catch (error) {
           toast.showError(t("config.restoreVersionFailed"));
         } finally {
-          setConfirmDialog({ isOpen: false, title: "", message: "", onConfirm: () => {} });
+          setConfirmDialog({ isOpen: false, title: "", message: "", onConfirm: () => { } });
         }
       },
     });
@@ -880,7 +879,7 @@ export default function ConfigEditor() {
         setTemplates(updated);
         saveTemplates(updated);
         toast.showSuccess(t("config.templateDeleted"));
-        setConfirmDialog({ isOpen: false, title: "", message: "", onConfirm: () => {} });
+        setConfirmDialog({ isOpen: false, title: "", message: "", onConfirm: () => { } });
       },
     });
   }
@@ -940,7 +939,7 @@ export default function ConfigEditor() {
                         onConfirm: async () => {
                           // 用户选择放弃修改，直接切换
                           setViewMode("visual");
-                          setConfirmDialog({ isOpen: false, title: "", message: "", onConfirm: () => {} });
+                          setConfirmDialog({ isOpen: false, title: "", message: "", onConfirm: () => { } });
                         },
                       });
                     } else {
@@ -948,11 +947,10 @@ export default function ConfigEditor() {
                     }
                   }
                 }}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm ${
-                  viewMode === "code"
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "bg-gray-100 dark:bg-dark-bg-hover text-gray-700 dark:text-dark-text-primary hover:bg-gray-200 dark:hover:bg-dark-bg-active"
-                }`}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm ${viewMode === "code"
+                  ? "bg-blue-600 text-white hover:bg-blue-700"
+                  : "bg-gray-100 dark:bg-dark-bg-hover text-gray-700 dark:text-dark-text-primary hover:bg-gray-200 dark:hover:bg-dark-bg-active"
+                  }`}
               >
                 <Code className="w-4 h-4" />
                 {t("config.codeConfig")}
@@ -975,7 +973,7 @@ export default function ConfigEditor() {
                       } catch (error) {
                         toast.showError(t("config.initConfigFailed"));
                       } finally {
-                        setConfirmDialog({ isOpen: false, title: "", message: "", onConfirm: () => {} });
+                        setConfirmDialog({ isOpen: false, title: "", message: "", onConfirm: () => { } });
                       }
                     },
                   });
@@ -987,11 +985,10 @@ export default function ConfigEditor() {
               </button>
               <button
                 onClick={() => setShowHistory(!showHistory)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm ${
-                  showHistory
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "bg-gray-100 dark:bg-dark-bg-hover text-gray-700 dark:text-dark-text-primary hover:bg-gray-200 dark:hover:bg-dark-bg-active"
-                }`}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm ${showHistory
+                  ? "bg-blue-600 text-white hover:bg-blue-700"
+                  : "bg-gray-100 dark:bg-dark-bg-hover text-gray-700 dark:text-dark-text-primary hover:bg-gray-200 dark:hover:bg-dark-bg-active"
+                  }`}
                 title={t("config.history")}
               >
                 <History className="w-4 h-4" />
@@ -1008,639 +1005,628 @@ export default function ConfigEditor() {
           <div className="p-8">
             <div className="max-w-6xl mx-auto space-y-6">
 
-            {/* {t("config.history")}模态框 */}
-        <HistoryPanel
-          isOpen={showHistory}
-          loading={loadingHistory}
-          versions={historyVersions}
-          onClose={() => setShowHistory(false)}
-          onRestore={restoreVersion}
-          onDelete={deleteVersion}
-        />
+              {/* {t("config.history")}模态框 */}
+              <HistoryPanel
+                isOpen={showHistory}
+                loading={loadingHistory}
+                versions={historyVersions}
+                onClose={() => setShowHistory(false)}
+                onRestore={restoreVersion}
+                onDelete={deleteVersion}
+              />
 
-        {/* 模板面板 */}
-        {showTemplates && (
-          <div className="bg-white dark:bg-dark-bg-card rounded-lg border border-gray-200 dark:border-dark-border-subtle overflow-hidden transition-colors duration-200">
-            <div className="p-5 border-b border-gray-200 dark:border-dark-border-subtle flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
-                  <Copy className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                </div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
-                  {t("config.configTemplates")}
-                </h2>
-              </div>
-              <button
-                onClick={openSaveTemplateDialog}
-                className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm font-medium"
-              >
-                <Plus className="w-4 h-4" />
-                {t("config.saveAsTemplate")}
-              </button>
-            </div>
-
-            <div className="p-5">
-              {templates.length === 0 ? (
-                <EmptyState
-                  icon={FolderOpen}
-                  title={t("config.noTemplates")}
-                  description={t("config.noTemplatesDesc")}
-                />
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {templates.map((template) => (
-                    <div
-                      key={template.id}
-                      className="group p-4 rounded-lg bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle hover:border-purple-200 dark:hover:border-purple-500/50 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 dark:text-dark-text-primary text-sm mb-1">
-                            {template.name}
-                          </h4>
-                          {template.description && (
-                            <p className="text-xs text-gray-500 dark:text-dark-text-muted line-clamp-2">
-                              {template.description}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                          <button
-                            onClick={() => applyTemplate(template)}
-                            className="p-1.5 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
-                            title={t("config.applyTemplate")}
-                          >
-                            <FolderOpen className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => deleteTemplate(template)}
-                            className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                            title={t("config.delete")}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+              {/* 模板面板 */}
+              {showTemplates && (
+                <div className="bg-white dark:bg-dark-bg-card rounded-lg border border-gray-200 dark:border-dark-border-subtle overflow-hidden transition-colors duration-200">
+                  <div className="p-5 border-b border-gray-200 dark:border-dark-border-subtle flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
+                        <Copy className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                       </div>
-                      <div className="text-xs text-gray-400 dark:text-dark-text-muted">
-                        {new Date(template.createdAt).toLocaleString(i18n.language === "en" ? "en-US" : "zh-CN")}
+                      <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
+                        {t("config.configTemplates")}
+                      </h2>
+                    </div>
+                    <button
+                      onClick={openSaveTemplateDialog}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm font-medium"
+                    >
+                      <Plus className="w-4 h-4" />
+                      {t("config.saveAsTemplate")}
+                    </button>
+                  </div>
+
+                  <div className="p-5">
+                    {templates.length === 0 ? (
+                      <EmptyState
+                        icon={FolderOpen}
+                        title={t("config.noTemplates")}
+                        description={t("config.noTemplatesDesc")}
+                      />
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {templates.map((template) => (
+                          <div
+                            key={template.id}
+                            className="group p-4 rounded-lg bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle hover:border-purple-200 dark:hover:border-purple-500/50 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all"
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-900 dark:text-dark-text-primary text-sm mb-1">
+                                  {template.name}
+                                </h4>
+                                {template.description && (
+                                  <p className="text-xs text-gray-500 dark:text-dark-text-muted line-clamp-2">
+                                    {template.description}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                <button
+                                  onClick={() => applyTemplate(template)}
+                                  className="p-1.5 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
+                                  title={t("config.applyTemplate")}
+                                >
+                                  <FolderOpen className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => deleteTemplate(template)}
+                                  className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                                  title={t("config.delete")}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="text-xs text-gray-400 dark:text-dark-text-muted">
+                              {new Date(template.createdAt).toLocaleString(i18n.language === "en" ? "en-US" : "zh-CN")}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Providers 配置 */}
+              <div className="bg-white dark:bg-dark-bg-card rounded-lg border border-gray-200 dark:border-dark-border-subtle overflow-hidden transition-colors duration-200">
+                <button
+                  onClick={() => toggleSection("providers")}
+                  className="w-full p-5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-dark-bg-hover transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                      <Bot className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
+                      {t("config.llmProviders")}
+                    </h2>
+                  </div>
+                  {expandedSections.has("providers") ? (
+                    <ChevronUp className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
+                  )}
+                </button>
+
+                {expandedSections.has("providers") && (
+                  <div className="p-5 pt-0 space-y-4">
+                    {/* 可用的 Provider 列表 */}
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-600 dark:text-dark-text-secondary mb-3">{t("config.selectProvider")}</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {AVAILABLE_PROVIDERS.map((provider) => {
+                          const isConfigured = isProviderConfigured(config, provider.id);
+                          const isCurrentProvider = selectedProviderId === provider.id;
+                          const isOAuth = isOAuthProvider(provider.id);
+                          const oauthStatus = isOAuth ? oauthTokenStatuses[provider.id] : undefined;
+                          const isOAuthLoggedIn = oauthStatus === true;
+                          const isOAuthExpired = oauthStatus === "expired";
+
+                          return (
+                            <div
+                              key={provider.id}
+                              className={`group rounded-lg border transition-all hover:shadow-md ${isCurrentProvider
+                                ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-500/50 ring-2 ring-blue-200 dark:ring-blue-500/30"
+                                : isOAuthLoggedIn
+                                  ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-500/50"
+                                  : isOAuthExpired
+                                    ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-500/50"
+                                    : isConfigured && !isOAuth
+                                      ? "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-500/50"
+                                      : "bg-white dark:bg-dark-bg-card border-gray-200 dark:border-dark-border-subtle hover:border-gray-300 dark:hover:border-dark-border-default"
+                                }`}
+                            >
+                              <div className="w-full p-4 text-left">
+                                <div className="flex items-start justify-between">
+                                  <div
+                                    className="flex items-center gap-2 flex-1 cursor-pointer"
+                                    onClick={() => {
+                                      // 应用该提供商的 Agent 配置
+                                      applyProviderAgentConfig(provider.id);
+                                    }}
+                                  >
+                                    <div className={`p-2 rounded-lg ${provider.colorClass.split(' text-')[0]}`}>
+                                      <ProviderIcon name={provider.icon} className={`w-5 h-5 ${'text-' + provider.colorClass.split(' text-')[1]}`} />
+                                    </div>
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <h3 className="font-semibold text-gray-900 dark:text-dark-text-primary text-sm">
+                                          {t(provider.nameKey)}
+                                        </h3>
+                                        {isCurrentProvider && (
+                                          <span className="px-2 py-0.5 bg-blue-600 text-white text-xs rounded-full font-medium">
+                                            {t("config.currentUse")}
+                                          </span>
+                                        )}
+                                        {!isCurrentProvider && isOAuthLoggedIn && (
+                                          <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs rounded-full">
+                                            {t("config.oauthConfigured")}
+                                          </span>
+                                        )}
+                                        {!isCurrentProvider && isOAuthExpired && (
+                                          <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs rounded-full">
+                                            {t("config.tokenExpiredShort")}
+                                          </span>
+                                        )}
+                                        {!isCurrentProvider && !isOAuthLoggedIn && !isOAuthExpired && isConfigured && !isOAuth && (
+                                          <span className="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs rounded-full">
+                                            {t("config.configured")}
+                                          </span>
+                                        )}
+                                        {!isCurrentProvider && !isOAuthLoggedIn && !isOAuthExpired && !isConfigured && (
+                                          <span className="px-2 py-0.5 bg-gray-100 dark:bg-dark-bg-hover text-gray-600 dark:text-dark-text-muted text-xs rounded-full">
+                                            {isOAuth ? t("config.notLoggedIn") : t("config.notConfigured")}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditingProvider({
+                                        isOpen: true,
+                                        providerId: provider.id,
+                                        providerInfo: provider,
+                                        activeTab: "api",
+                                      });
+                                    }}
+                                    className="p-2 bg-white dark:bg-dark-bg-card rounded-lg border border-gray-200 dark:border-dark-border-subtle group-hover:border-blue-200 dark:group-hover:border-blue-500/50 transition-colors hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                                    title={`${t("config.apiConfig")} & ${t("config.agentConfig")}`}
+                                  >
+                                    <Settings className="w-5 h-5 text-gray-400 dark:text-dark-text-muted group-hover:text-blue-600 dark:group-hover:text-blue-400" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
-        {/* Providers 配置 */}
-        <div className="bg-white dark:bg-dark-bg-card rounded-lg border border-gray-200 dark:border-dark-border-subtle overflow-hidden transition-colors duration-200">
-          <button
-            onClick={() => toggleSection("providers")}
-            className="w-full p-5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-dark-bg-hover transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                <Bot className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    {Object.keys(config.providers || {}).length === 0 && (
+                      <EmptyState
+                        icon={Bot}
+                        title={t("config.noProvidersConfigured")}
+                        description={t("config.noProvidersDesc")}
+                      />
+                    )}
+                  </div>
+                )}
               </div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
-                {t("config.llmProviders")}
-              </h2>
-            </div>
-            {expandedSections.has("providers") ? (
-              <ChevronUp className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
-            )}
-          </button>
 
-          {expandedSections.has("providers") && (
-            <div className="p-5 pt-0 space-y-4">
-              {/* 可用的 Provider 列表 */}
-              <div className="space-y-2">
-                <p className="text-sm text-gray-600 dark:text-dark-text-secondary mb-3">{t("config.selectProvider")}</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {AVAILABLE_PROVIDERS.map((provider) => {
-                    const isConfigured = isProviderConfigured(config, provider.id);
-                    const isCurrentProvider = selectedProviderId === provider.id;
-                    const isOAuth = isOAuthProvider(provider.id);
-                    const oauthStatus = isOAuth ? oauthTokenStatuses[provider.id] : undefined;
-                    const isOAuthLoggedIn = oauthStatus === true;
-                    const isOAuthExpired = oauthStatus === "expired";
+              {/* Channels 配置 */}
+              <div className="bg-white dark:bg-dark-bg-card rounded-lg border border-gray-200 dark:border-dark-border-subtle overflow-hidden transition-colors duration-200">
+                <button
+                  onClick={() => toggleSection("channels")}
+                  className="w-full p-5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-dark-bg-hover transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-green-50 dark:bg-green-900/30 rounded-lg">
+                      <MessageSquare className="w-5 h-5 text-green-600 dark:text-green-400" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
+                      {t("config.messageChannels")}
+                    </h2>
+                  </div>
+                  {expandedSections.has("channels") ? (
+                    <ChevronUp className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
+                  )}
+                </button>
 
-                    return (
-                      <div
-                        key={provider.id}
-                        className={`group rounded-lg border transition-all hover:shadow-md ${
-                          isCurrentProvider
-                            ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-500/50 ring-2 ring-blue-200 dark:ring-blue-500/30"
-                            : isOAuthLoggedIn
-                            ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-500/50"
-                            : isOAuthExpired
-                            ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-500/50"
-                            : isConfigured && !isOAuth
-                            ? "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-500/50"
-                            : "bg-white dark:bg-dark-bg-card border-gray-200 dark:border-dark-border-subtle hover:border-gray-300 dark:hover:border-dark-border-default"
-                        }`}
-                      >
-                        <div className="w-full p-4 text-left">
-                          <div className="flex items-start justify-between">
+                {expandedSections.has("channels") && (
+                  <div className="p-5 pt-0 space-y-4">
+                    {/* 可用的渠道列表 */}
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-600 dark:text-dark-text-secondary mb-3">{t("config.selectChannel")}</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {CHANNELS_CONFIG.map((channel) => {
+                          const isEnabled = config.channels?.[channel.key]?.enabled || false;
+                          return (
                             <div
-                              className="flex items-center gap-2 flex-1 cursor-pointer"
-                              onClick={() => {
-                                // 应用该提供商的 Agent 配置
-                                applyProviderAgentConfig(provider.id);
-                              }}
-                            >
-                              <div className={`p-2 rounded-lg ${provider.colorClass.split(' text-')[0]}`}>
-                                <ProviderIcon name={provider.icon} className={`w-5 h-5 ${'text-' + provider.colorClass.split(' text-')[1]}`} />
-                              </div>
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <h3 className="font-semibold text-gray-900 dark:text-dark-text-primary text-sm">
-                                    {t(provider.nameKey)}
-                                  </h3>
-                                  {isCurrentProvider && (
-                                    <span className="px-2 py-0.5 bg-blue-600 text-white text-xs rounded-full font-medium">
-                                      {t("config.currentUse")}
-                                    </span>
-                                  )}
-                                  {!isCurrentProvider && isOAuthLoggedIn && (
-                                    <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs rounded-full">
-                                      {t("config.oauthConfigured")}
-                                    </span>
-                                  )}
-                                  {!isCurrentProvider && isOAuthExpired && (
-                                    <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs rounded-full">
-                                      {t("config.tokenExpiredShort")}
-                                    </span>
-                                  )}
-                                  {!isCurrentProvider && !isOAuthLoggedIn && !isOAuthExpired && isConfigured && !isOAuth && (
-                                    <span className="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs rounded-full">
-                                      {t("config.configured")}
-                                    </span>
-                                  )}
-                                  {!isCurrentProvider && !isOAuthLoggedIn && !isOAuthExpired && !isConfigured && (
-                                    <span className="px-2 py-0.5 bg-gray-100 dark:bg-dark-bg-hover text-gray-600 dark:text-dark-text-muted text-xs rounded-full">
-                                      {isOAuth ? t("config.notLoggedIn") : t("config.notConfigured")}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingProvider({
-                                  isOpen: true,
-                                  providerId: provider.id,
-                                  providerInfo: provider,
-                                  activeTab: "api",
-                                });
-                              }}
-                              className="p-2 bg-white dark:bg-dark-bg-card rounded-lg border border-gray-200 dark:border-dark-border-subtle group-hover:border-blue-200 dark:group-hover:border-blue-500/50 transition-colors hover:bg-blue-50 dark:hover:bg-blue-900/30"
-                              title={`${t("config.apiConfig")} & ${t("config.agentConfig")}`}
-                            >
-                              <Settings className="w-5 h-5 text-gray-400 dark:text-dark-text-muted group-hover:text-blue-600 dark:group-hover:text-blue-400" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {Object.keys(config.providers || {}).length === 0 && (
-                <EmptyState
-                  icon={Bot}
-                  title={t("config.noProvidersConfigured")}
-                  description={t("config.noProvidersDesc")}
-                />
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Channels 配置 */}
-        <div className="bg-white dark:bg-dark-bg-card rounded-lg border border-gray-200 dark:border-dark-border-subtle overflow-hidden transition-colors duration-200">
-          <button
-            onClick={() => toggleSection("channels")}
-            className="w-full p-5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-dark-bg-hover transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-50 dark:bg-green-900/30 rounded-lg">
-                <MessageSquare className="w-5 h-5 text-green-600 dark:text-green-400" />
-              </div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
-                {t("config.messageChannels")}
-              </h2>
-            </div>
-            {expandedSections.has("channels") ? (
-              <ChevronUp className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
-            )}
-          </button>
-
-          {expandedSections.has("channels") && (
-            <div className="p-5 pt-0 space-y-4">
-              {/* 可用的渠道列表 */}
-              <div className="space-y-2">
-                <p className="text-sm text-gray-600 dark:text-dark-text-secondary mb-3">{t("config.selectChannel")}</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {CHANNELS_CONFIG.map((channel) => {
-                    const isEnabled = config.channels?.[channel.key]?.enabled || false;
-                    return (
-                      <div
-                        key={channel.key}
-                        className={`group rounded-lg border transition-all hover:shadow-md ${
-                          isEnabled
-                            ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-500/50"
-                            : "bg-white dark:bg-dark-bg-card border-gray-200 dark:border-dark-border-subtle hover:border-gray-300 dark:hover:border-dark-border-default"
-                        }`}
-                      >
-                        <div className="w-full p-4 text-left">
-                          <div className="flex items-center justify-between">
-                            <div
-                              className="flex items-center gap-2 flex-1 cursor-pointer"
-                              onClick={() =>
-                                setEditingChannel({
-                                  isOpen: true,
-                                  channelKey: channel.key,
-                                  channelInfo: channel,
-                                })
-                              }
-                            >
-                              <div className={`p-2 rounded-lg ${channel.colorClass.split(' text-')[0]}`}>
-                                <MessageSquare className={`w-5 h-5 ${'text-' + channel.colorClass.split(' text-')[1]}`} />
-                              </div>
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <h3 className="font-semibold text-gray-900 dark:text-dark-text-primary text-sm">
-                                    {t(channel.nameKey)}
-                                  </h3>
-                                  {isEnabled && (
-                                    <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs rounded-full">
-                                      {t("config.enabled")}
-                                    </span>
-                                  )}
-                                  {!isEnabled && (
-                                    <span className="px-2 py-0.5 bg-gray-100 dark:bg-dark-bg-hover text-gray-600 dark:text-dark-text-muted text-xs rounded-full">
-                                      {t("config.notEnabled")}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                updateChannel(channel.key, !isEnabled);
-                              }}
-                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                isEnabled ? "bg-blue-600" : "bg-gray-300 dark:bg-dark-border-default"
-                              }`}
-                              title={isEnabled ? t("config.clickToDisable") : t("config.clickToEnable")}
-                            >
-                              <span
-                                className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-dark-text-primary transition-transform shadow ${
-                                  isEnabled ? "translate-x-5" : "translate-x-0.5"
+                              key={channel.key}
+                              className={`group rounded-lg border transition-all hover:shadow-md ${isEnabled
+                                ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-500/50"
+                                : "bg-white dark:bg-dark-bg-card border-gray-200 dark:border-dark-border-subtle hover:border-gray-300 dark:hover:border-dark-border-default"
                                 }`}
-                              />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {Object.keys(config.channels || {}).length === 0 && (
-                <EmptyState
-                  icon={Inbox}
-                  title={t("config.noChannelsConfigured")}
-                  description={t("dashboard.clickToStartConfig")}
-                />
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* MCP Servers 配置 */}
-        <div className="bg-white dark:bg-dark-bg-card rounded-lg border border-gray-200 dark:border-dark-border-subtle overflow-hidden transition-colors duration-200">
-          <button
-            onClick={() => toggleSection("mcp")}
-            className="w-full p-5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-dark-bg-hover transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg">
-                <Plug className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
-                {t("mcp.title")}
-              </h2>
-            </div>
-            {expandedSections.has("mcp") ? (
-              <ChevronUp className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
-            )}
-          </button>
-
-          {expandedSections.has("mcp") && (
-            <div className="p-5 pt-0 space-y-4">
-              {/* MCP Server 列表 */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm text-gray-600 dark:text-dark-text-secondary">{t("mcp.description")}</p>
-                  <button
-                    onClick={() =>
-                      setEditingMcpServer({
-                        isOpen: true,
-                        serverId: "",
-                        server: null,
-                        mode: "add",
-                      })
-                    }
-                    className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors text-sm font-medium"
-                  >
-                    <Plus className="w-4 h-4" />
-                    {t("mcp.addServer")}
-                  </button>
-                </div>
-
-                {Object.keys(mcpServersConfig).length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {Object.entries(mcpServersConfig).map(([serverId, server]) => {
-                      const isHttpMode = !!server.url;
-                      const isEnabled = !server.disabled;
-                      return (
-                        <div
-                          key={serverId}
-                          className={`group rounded-lg border transition-all hover:shadow-md ${
-                            isEnabled
-                              ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-500/50"
-                              : "bg-gray-50 dark:bg-dark-bg-card border-gray-200 dark:border-dark-border-subtle"
-                          }`}
-                        >
-                          <div className="w-full p-4 text-left">
-                            <div className="flex items-center justify-between">
-                              <div
-                                className="flex items-center gap-2 flex-1 cursor-pointer"
-                                onClick={() =>
-                                  setEditingMcpServer({
-                                    isOpen: true,
-                                    serverId,
-                                    server,
-                                    mode: "edit",
-                                  })
-                                }
-                              >
-                                <div className={`p-2 rounded-lg ${
-                                  isEnabled
-                                    ? "bg-emerald-100 dark:bg-emerald-900/30"
-                                    : "bg-gray-100 dark:bg-dark-bg-hover"
-                                }`}>
-                                  {isHttpMode ? (
-                                    <Globe className={`w-5 h-5 ${isEnabled ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400 dark:text-dark-text-muted"}`} />
-                                  ) : (
-                                    <Terminal className={`w-5 h-5 ${isEnabled ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400 dark:text-dark-text-muted"}`} />
-                                  )}
+                            >
+                              <div className="w-full p-4 text-left">
+                                <div className="flex items-center justify-between">
+                                  <div
+                                    className="flex items-center gap-2 flex-1 cursor-pointer"
+                                    onClick={() =>
+                                      setEditingChannel({
+                                        isOpen: true,
+                                        channelKey: channel.key,
+                                        channelInfo: channel,
+                                      })
+                                    }
+                                  >
+                                    <div className={`p-2 rounded-lg ${channel.colorClass.split(' text-')[0]}`}>
+                                      <MessageSquare className={`w-5 h-5 ${'text-' + channel.colorClass.split(' text-')[1]}`} />
+                                    </div>
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <h3 className="font-semibold text-gray-900 dark:text-dark-text-primary text-sm">
+                                          {t(channel.nameKey)}
+                                        </h3>
+                                        {isEnabled && (
+                                          <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs rounded-full">
+                                            {t("config.enabled")}
+                                          </span>
+                                        )}
+                                        {!isEnabled && (
+                                          <span className="px-2 py-0.5 bg-gray-100 dark:bg-dark-bg-hover text-gray-600 dark:text-dark-text-muted text-xs rounded-full">
+                                            {t("config.notEnabled")}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateChannel(channel.key, !isEnabled);
+                                    }}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isEnabled ? "bg-blue-600" : "bg-gray-300 dark:bg-dark-border-default"
+                                      }`}
+                                    title={isEnabled ? t("config.clickToDisable") : t("config.clickToEnable")}
+                                  >
+                                    <span
+                                      className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-dark-text-primary transition-transform shadow ${isEnabled ? "translate-x-5" : "translate-x-0.5"
+                                        }`}
+                                    />
+                                  </button>
                                 </div>
-                                <div className="min-w-0 flex-1">
-                                  <h3 className="font-semibold text-gray-900 dark:text-dark-text-primary text-sm truncate" title={serverId}>
-                                    {serverId}
-                                  </h3>
-                                  <div className="flex items-center gap-2 mt-0.5">
-                                    <p className="text-xs text-gray-500 dark:text-dark-text-muted">
-                                      {isHttpMode ? t("mcp.http") : t("mcp.stdio")}
-                                    </p>
-                                    {isEnabled ? (
-                                      <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs rounded-full whitespace-nowrap">
-                                        {t("config.enabled")}
-                                      </span>
-                                    ) : (
-                                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-dark-bg-hover text-gray-600 dark:text-dark-text-muted text-xs rounded-full whitespace-nowrap">
-                                        {t("config.notEnabled")}
-                                      </span>
-                                    )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {Object.keys(config.channels || {}).length === 0 && (
+                      <EmptyState
+                        icon={Inbox}
+                        title={t("config.noChannelsConfigured")}
+                        description={t("dashboard.clickToStartConfig")}
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* MCP Servers 配置 */}
+              <div className="bg-white dark:bg-dark-bg-card rounded-lg border border-gray-200 dark:border-dark-border-subtle overflow-hidden transition-colors duration-200">
+                <button
+                  onClick={() => toggleSection("mcp")}
+                  className="w-full p-5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-dark-bg-hover transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg">
+                      <Plug className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
+                      {t("mcp.title")}
+                    </h2>
+                  </div>
+                  {expandedSections.has("mcp") ? (
+                    <ChevronUp className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
+                  )}
+                </button>
+
+                {expandedSections.has("mcp") && (
+                  <div className="p-5 pt-0 space-y-4">
+                    {/* MCP Server 列表 */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-sm text-gray-600 dark:text-dark-text-secondary">{t("mcp.description")}</p>
+                        <button
+                          onClick={() =>
+                            setEditingMcpServer({
+                              isOpen: true,
+                              serverId: "",
+                              server: null,
+                              mode: "add",
+                            })
+                          }
+                          className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors text-sm font-medium"
+                        >
+                          <Plus className="w-4 h-4" />
+                          {t("mcp.addServer")}
+                        </button>
+                      </div>
+
+                      {Object.keys(mcpServersConfig).length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {Object.entries(mcpServersConfig).map(([serverId, server]) => {
+                            const isHttpMode = !!server.url;
+                            const isEnabled = !server.disabled;
+                            return (
+                              <div
+                                key={serverId}
+                                className={`group rounded-lg border transition-all hover:shadow-md ${isEnabled
+                                  ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-500/50"
+                                  : "bg-gray-50 dark:bg-dark-bg-card border-gray-200 dark:border-dark-border-subtle"
+                                  }`}
+                              >
+                                <div className="w-full p-4 text-left">
+                                  <div className="flex items-center justify-between">
+                                    <div
+                                      className="flex items-center gap-2 flex-1 cursor-pointer"
+                                      onClick={() =>
+                                        setEditingMcpServer({
+                                          isOpen: true,
+                                          serverId,
+                                          server,
+                                          mode: "edit",
+                                        })
+                                      }
+                                    >
+                                      <div className={`p-2 rounded-lg ${isEnabled
+                                        ? "bg-emerald-100 dark:bg-emerald-900/30"
+                                        : "bg-gray-100 dark:bg-dark-bg-hover"
+                                        }`}>
+                                        {isHttpMode ? (
+                                          <Globe className={`w-5 h-5 ${isEnabled ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400 dark:text-dark-text-muted"}`} />
+                                        ) : (
+                                          <Terminal className={`w-5 h-5 ${isEnabled ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400 dark:text-dark-text-muted"}`} />
+                                        )}
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <h3 className="font-semibold text-gray-900 dark:text-dark-text-primary text-sm truncate" title={serverId}>
+                                          {serverId}
+                                        </h3>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                          <p className="text-xs text-gray-500 dark:text-dark-text-muted">
+                                            {isHttpMode ? t("mcp.http") : t("mcp.stdio")}
+                                          </p>
+                                          {isEnabled ? (
+                                            <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs rounded-full whitespace-nowrap">
+                                              {t("config.enabled")}
+                                            </span>
+                                          ) : (
+                                            <span className="px-2 py-0.5 bg-gray-100 dark:bg-dark-bg-hover text-gray-600 dark:text-dark-text-muted text-xs rounded-full whitespace-nowrap">
+                                              {t("config.notEnabled")}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleMcpServer(serverId);
+                                      }}
+                                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isEnabled ? "bg-blue-600" : "bg-gray-300 dark:bg-dark-border-default"
+                                        }`}
+                                      title={isEnabled ? t("config.clickToDisable") : t("config.clickToEnable")}
+                                    >
+                                      <span
+                                        className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-dark-text-primary transition-transform shadow ${isEnabled ? "translate-x-5" : "translate-x-0.5"
+                                          }`}
+                                      />
+                                    </button>
                                   </div>
                                 </div>
                               </div>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleMcpServer(serverId);
-                                }}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                  isEnabled ? "bg-blue-600" : "bg-gray-300 dark:bg-dark-border-default"
-                                }`}
-                                title={isEnabled ? t("config.clickToDisable") : t("config.clickToEnable")}
-                              >
-                                <span
-                                  className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-dark-text-primary transition-transform shadow ${
-                                    isEnabled ? "translate-x-5" : "translate-x-0.5"
-                                  }`}
-                                />
-                              </button>
-                            </div>
-                          </div>
+                            );
+                          })}
                         </div>
-                      );
-                    })}
+                      ) : (
+                        <EmptyState
+                          icon={Plug}
+                          title={t("mcp.noServers")}
+                          description={t("mcp.noServersDesc")}
+                        />
+                      )}
+                    </div>
                   </div>
-                ) : (
-                  <EmptyState
-                    icon={Plug}
-                    title={t("mcp.noServers")}
-                    description={t("mcp.noServersDesc")}
-                  />
                 )}
               </div>
-            </div>
-          )}
-        </div>
 
-        {/* Tools 配置 */}
-        <div className="bg-white dark:bg-dark-bg-card rounded-lg border border-gray-200 dark:border-dark-border-subtle overflow-hidden transition-colors duration-200">
-          <button
-            onClick={() => toggleSection("tools")}
-            className="w-full p-5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-dark-bg-hover transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg">
-                <Wrench className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
-                {t("config.toolsConfig")}
-              </h2>
-            </div>
-            {expandedSections.has("tools") ? (
-              <ChevronUp className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
-            )}
-          </button>
-
-          {expandedSections.has("tools") && (
-            <div className="p-5 pt-0 space-y-6">
-              {/* Exec 配置 */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-dark-text-secondary flex items-center gap-2">
-                  <Terminal className="w-4 h-4" />
-                  {t("config.execConfig")}
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-600 dark:text-dark-text-secondary mb-1">
-                      {t("config.execTimeout")}
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min="1"
-                        value={config.tools?.exec?.timeout ?? 60}
-                        onChange={(e) => updateToolsExecConfig("timeout", parseInt(e.target.value) || 60)}
-                        className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary"
-                      />
-                      <span className="text-sm text-gray-500 dark:text-dark-text-muted whitespace-nowrap">
-                        {t("config.seconds")}
-                      </span>
+              {/* Tools 配置 */}
+              <div className="bg-white dark:bg-dark-bg-card rounded-lg border border-gray-200 dark:border-dark-border-subtle overflow-hidden transition-colors duration-200">
+                <button
+                  onClick={() => toggleSection("tools")}
+                  className="w-full p-5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-dark-bg-hover transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg">
+                      <Wrench className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                     </div>
-                    <p className="text-xs text-gray-400 dark:text-dark-text-muted mt-1">
-                      {t("config.execTimeoutDesc")}
-                    </p>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
+                      {t("config.toolsConfig")}
+                    </h2>
                   </div>
-                </div>
-              </div>
+                  {expandedSections.has("tools") ? (
+                    <ChevronUp className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
+                  )}
+                </button>
 
-              {/* Web Search 配置 */}
-              <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-dark-border-subtle">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-dark-text-secondary flex items-center gap-2">
-                  <Globe className="w-4 h-4" />
-                  {t("config.webSearchConfig")}
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-600 dark:text-dark-text-secondary mb-1">
-                      {t("config.webSearchApiKey")}
-                    </label>
-                    <input
-                      type="password"
-                      value={config.tools?.web?.search?.apiKey || ""}
-                      onChange={(e) => updateToolsWebSearchConfig("apiKey", e.target.value)}
-                      placeholder={t("config.apiKeyPlaceholder")}
-                      className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted"
-                    />
-                    <p className="text-xs text-gray-400 dark:text-dark-text-muted mt-1">
-                      {t("config.webSearchApiKeyDesc")}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 dark:text-dark-text-secondary mb-1">
-                      {t("config.webSearchMaxResults")}
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="20"
-                      value={config.tools?.web?.search?.maxResults ?? 5}
-                      onChange={(e) => updateToolsWebSearchConfig("maxResults", parseInt(e.target.value) || 5)}
-                      className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary"
-                    />
-                    <p className="text-xs text-gray-400 dark:text-dark-text-muted mt-1">
-                      {t("config.webSearchMaxResultsDesc")}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Security 配置 */}
-        <div className="bg-white dark:bg-dark-bg-card rounded-lg border border-gray-200 dark:border-dark-border-subtle overflow-hidden transition-colors duration-200">
-          <button
-            onClick={() => toggleSection("security")}
-            className="w-full p-5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-dark-bg-hover transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-50 dark:bg-amber-900/30 rounded-lg">
-                <Shield className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-              </div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
-                {t("config.security")}
-              </h2>
-            </div>
-            {expandedSections.has("security") ? (
-              <ChevronUp className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
-            )}
-          </button>
-
-          {expandedSections.has("security") && (
-            <div className="p-5 pt-0 space-y-4">
-              <p className="text-sm text-gray-600 dark:text-dark-text-secondary">
-                {t("config.securityDesc")}
-              </p>
-
-              <div className="space-y-3">
-                {/* restrictToWorkspace */}
-                <div className={`rounded-lg border p-4 transition-all ${
-                  config.tools?.restrictToWorkspace
-                    ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-500/50"
-                    : "bg-white dark:bg-dark-bg-card border-gray-200 dark:border-dark-border-subtle"
-                }`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 mr-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-gray-900 dark:text-dark-text-primary text-sm">
-                          {t("config.restrictToWorkspace")}
-                        </h3>
-                        {config.tools?.restrictToWorkspace && (
-                          <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs rounded-full">
-                            {t("config.enabled")}
-                          </span>
-                        )}
+                {expandedSections.has("tools") && (
+                  <div className="p-5 pt-0 space-y-6">
+                    {/* Exec 配置 */}
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold text-gray-700 dark:text-dark-text-secondary flex items-center gap-2">
+                        <Terminal className="w-4 h-4" />
+                        {t("config.execConfig")}
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm text-gray-600 dark:text-dark-text-secondary mb-1">
+                            {t("config.execTimeout")}
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="1"
+                              value={config.tools?.exec?.timeout ?? 60}
+                              onChange={(e) => updateToolsExecConfig("timeout", parseInt(e.target.value) || 60)}
+                              className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary"
+                            />
+                            <span className="text-sm text-gray-500 dark:text-dark-text-muted whitespace-nowrap">
+                              {t("config.seconds")}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-400 dark:text-dark-text-muted mt-1">
+                            {t("config.execTimeoutDesc")}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs text-gray-500 dark:text-dark-text-muted">
-                        {t("config.restrictToWorkspaceDesc")}
-                      </p>
                     </div>
-                    <button
-                      onClick={() => updateToolsConfig("restrictToWorkspace", !config.tools?.restrictToWorkspace)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
-                        config.tools?.restrictToWorkspace ? "bg-amber-500" : "bg-gray-300 dark:bg-dark-border-default"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-dark-text-primary transition-transform shadow ${
-                          config.tools?.restrictToWorkspace ? "translate-x-5" : "translate-x-0.5"
-                        }`}
-                      />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
 
+                    {/* Web Search 配置 */}
+                    <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-dark-border-subtle">
+                      <h3 className="text-sm font-semibold text-gray-700 dark:text-dark-text-secondary flex items-center gap-2">
+                        <Globe className="w-4 h-4" />
+                        {t("config.webSearchConfig")}
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm text-gray-600 dark:text-dark-text-secondary mb-1">
+                            {t("config.webSearchApiKey")}
+                          </label>
+                          <input
+                            type="password"
+                            value={config.tools?.web?.search?.apiKey || ""}
+                            onChange={(e) => updateToolsWebSearchConfig("apiKey", e.target.value)}
+                            placeholder={t("config.apiKeyPlaceholder")}
+                            className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-dark-text-muted"
+                          />
+                          <p className="text-xs text-gray-400 dark:text-dark-text-muted mt-1">
+                            {t("config.webSearchApiKeyDesc")}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-600 dark:text-dark-text-secondary mb-1">
+                            {t("config.webSearchMaxResults")}
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="20"
+                            value={config.tools?.web?.search?.maxResults ?? 5}
+                            onChange={(e) => updateToolsWebSearchConfig("maxResults", parseInt(e.target.value) || 5)}
+                            className="w-full px-3 py-2 bg-gray-50 dark:bg-dark-bg-sidebar border border-gray-200 dark:border-dark-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm text-gray-900 dark:text-dark-text-primary"
+                          />
+                          <p className="text-xs text-gray-400 dark:text-dark-text-muted mt-1">
+                            {t("config.webSearchMaxResultsDesc")}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Security 配置 */}
+              <div className="bg-white dark:bg-dark-bg-card rounded-lg border border-gray-200 dark:border-dark-border-subtle overflow-hidden transition-colors duration-200">
+                <button
+                  onClick={() => toggleSection("security")}
+                  className="w-full p-5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-dark-bg-hover transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-amber-50 dark:bg-amber-900/30 rounded-lg">
+                      <Shield className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
+                      {t("config.security")}
+                    </h2>
+                  </div>
+                  {expandedSections.has("security") ? (
+                    <ChevronUp className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-400 dark:text-dark-text-muted" />
+                  )}
+                </button>
+
+                {expandedSections.has("security") && (
+                  <div className="p-5 pt-0 space-y-4">
+                    <p className="text-sm text-gray-600 dark:text-dark-text-secondary">
+                      {t("config.securityDesc")}
+                    </p>
+
+                    <div className="space-y-3">
+                      {/* restrictToWorkspace */}
+                      <div className={`rounded-lg border p-4 transition-all ${config.tools?.restrictToWorkspace
+                        ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-500/50"
+                        : "bg-white dark:bg-dark-bg-card border-gray-200 dark:border-dark-border-subtle"
+                        }`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 mr-4">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-gray-900 dark:text-dark-text-primary text-sm">
+                                {t("config.restrictToWorkspace")}
+                              </h3>
+                              {config.tools?.restrictToWorkspace && (
+                                <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs rounded-full">
+                                  {t("config.enabled")}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500 dark:text-dark-text-muted">
+                              {t("config.restrictToWorkspaceDesc")}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => updateToolsConfig("restrictToWorkspace", !config.tools?.restrictToWorkspace)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${config.tools?.restrictToWorkspace ? "bg-amber-500" : "bg-gray-300 dark:bg-dark-border-default"
+                              }`}
+                          >
+                            <span
+                              className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-dark-text-primary transition-transform shadow ${config.tools?.restrictToWorkspace ? "translate-x-5" : "translate-x-0.5"
+                                }`}
+                            />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+            </div>
           </div>
-        </div>
-      ) : (
-        <CodeEditorView
-          code={code}
-          codeError={codeError}
-          savingCode={savingCode}
-          hasChanges={code !== JSON.stringify(originalConfig, null, 2)}
-          onCodeChange={handleCodeChange}
-          onFormat={formatCode}
-          onSave={saveCodeConfig}
-        />
-      )}
+        ) : (
+          <CodeEditorView
+            code={code}
+            codeError={codeError}
+            savingCode={savingCode}
+            hasChanges={code !== JSON.stringify(originalConfig, null, 2)}
+            onCodeChange={handleCodeChange}
+            onFormat={formatCode}
+            onSave={saveCodeConfig}
+          />
+        )}
       </div>
 
       {/* 确认对话框 */}
@@ -1650,7 +1636,7 @@ export default function ConfigEditor() {
         message={confirmDialog.message}
         type="warning"
         onConfirm={confirmDialog.onConfirm}
-        onCancel={() => setConfirmDialog({ isOpen: false, title: "", message: "", onConfirm: () => {} })}
+        onCancel={() => setConfirmDialog({ isOpen: false, title: "", message: "", onConfirm: () => { } })}
       />
 
       {/* 保存模板对话框 */}

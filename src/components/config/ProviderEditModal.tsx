@@ -16,7 +16,7 @@ import {
   Server,
 } from "lucide-react";
 import type { ProviderInfo, ProviderAgentConfig, Config } from "@/config/types";
-import { processApi } from "@/lib/tauri";
+import { processApi } from "@/lib/api";
 import { useToast } from "@/contexts/ToastContext";
 
 // 图标映射组件
@@ -202,21 +202,19 @@ export default function ProviderEditModal({
           <div className="flex gap-2 mt-4">
             <button
               onClick={() => onTabChange("api")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === "api"
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === "api"
                   ? "bg-blue-600 text-white"
                   : "bg-gray-100 dark:bg-dark-bg-hover text-gray-700 dark:text-dark-text-primary hover:bg-gray-200 dark:hover:bg-dark-bg-active"
-              }`}
+                }`}
             >
               {t("config.apiConfig")}
             </button>
             <button
               onClick={() => onTabChange("agent")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === "agent"
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === "agent"
                   ? "bg-blue-600 text-white"
                   : "bg-gray-100 dark:bg-dark-bg-hover text-gray-700 dark:text-dark-text-primary hover:bg-gray-200 dark:hover:bg-dark-bg-active"
-              }`}
+                }`}
             >
               {t("config.agentConfig")}
             </button>
@@ -271,11 +269,10 @@ export default function ProviderEditModal({
                     </div>
                   ) : (
                     /* 未登录或已过期：蓝色/黄色卡片 */
-                    <div className={`p-4 rounded-lg border ${
-                      oauthTokenStatus?.is_expired
+                    <div className={`p-4 rounded-lg border ${oauthTokenStatus?.is_expired
                         ? "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-500/30"
                         : "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-500/30"
-                    }`}>
+                      }`}>
                       <div className="flex items-center gap-3 mb-3">
                         <LogIn className={`w-5 h-5 ${oauthTokenStatus?.is_expired ? "text-yellow-600 dark:text-yellow-400" : "text-blue-600 dark:text-blue-400"}`} />
                         <span className={`font-medium ${oauthTokenStatus?.is_expired ? "text-yellow-900 dark:text-yellow-100" : "text-blue-900 dark:text-blue-100"}`}>
@@ -289,11 +286,10 @@ export default function ProviderEditModal({
                         <button
                           onClick={handleOAuthLogin}
                           disabled={isLoggingIn}
-                          className={`flex items-center gap-2 px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium ${
-                            oauthTokenStatus?.is_expired
+                          className={`flex items-center gap-2 px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium ${oauthTokenStatus?.is_expired
                               ? "bg-yellow-600 hover:bg-yellow-700"
                               : "bg-blue-600 hover:bg-blue-700"
-                          }`}
+                            }`}
                         >
                           {isLoggingIn ? (
                             <>

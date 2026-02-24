@@ -16,7 +16,7 @@ import {
   FolderTree,
   Info,
 } from "lucide-react";
-import { processApi } from "../lib/tauri";
+import { processApi } from "../lib/api";
 import { useToast } from "../contexts/ToastContext";
 import { useTheme } from "../contexts/ThemeContext";
 
@@ -247,10 +247,9 @@ export default function Layout({ children }: LayoutProps) {
                 to={item.path}
                 title={collapsed ? item.label : undefined}
                 className={({ isActive }) =>
-                  `group flex items-center ${collapsed ? "justify-center" : "gap-3"} px-3 py-2 rounded-lg transition-colors ${
-                    isActive
-                      ? "bg-blue-50 dark:bg-dark-bg-active text-blue-600 dark:text-dark-text-primary font-medium"
-                      : "text-gray-600 hover:bg-gray-100 dark:hover:bg-dark-bg-hover dark:text-dark-text-primary"
+                  `group flex items-center ${collapsed ? "justify-center" : "gap-3"} px-3 py-2 rounded-lg transition-colors ${isActive
+                    ? "bg-blue-50 dark:bg-dark-bg-active text-blue-600 dark:text-dark-text-primary font-medium"
+                    : "text-gray-600 hover:bg-gray-100 dark:hover:bg-dark-bg-hover dark:text-dark-text-primary"
                   }`
                 }
               >
@@ -266,11 +265,10 @@ export default function Layout({ children }: LayoutProps) {
               onClick={handleToggle}
               disabled={loading}
               title={collapsed ? (status.running ? t("layout.stop") : t("layout.start")) : undefined}
-              className={`w-full flex items-center ${collapsed ? "justify-center" : "justify-center gap-2"} px-3 py-2.5 rounded-lg transition-all font-medium text-sm ${
-                status.running
+              className={`w-full flex items-center ${collapsed ? "justify-center" : "justify-center gap-2"} px-3 py-2.5 rounded-lg transition-all font-medium text-sm ${status.running
                   ? "bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 dark:text-red-200"
                   : "bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/40 dark:text-green-200"
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {loading ? (
                 <RefreshCw className="w-4 h-4 animate-spin" />

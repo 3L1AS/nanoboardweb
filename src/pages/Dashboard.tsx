@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { processApi, networkApi } from "../lib/tauri";
+import { processApi, networkApi } from "../lib/api";
 
 // 导入类型
 import type {

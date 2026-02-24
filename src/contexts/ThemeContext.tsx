@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { themeApi } from "../lib/tauri";
+import { themeApi } from "../lib/api";
 
 type Theme = "light" | "dark";
 
