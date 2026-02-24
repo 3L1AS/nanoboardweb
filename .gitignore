@@ -50,3 +50,4 @@ lerna-debug.log*
 docs/
 DEVLOG.md
 BUILD_GUIDE.md
+docker-compose.yml

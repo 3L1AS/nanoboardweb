@@ -47,7 +47,7 @@ app.use('/api/cron', cronRouter);
 const frontendPath = path.join(__dirname, '../../dist');
 app.use(express.static(frontendPath));
 
-app.get('*', (req, res) => {
+app.get('/*', (req, res) => {
     if (req.path.startsWith('/api')) {
         return res.status(404).json({ error: 'API route not found' });
     }
