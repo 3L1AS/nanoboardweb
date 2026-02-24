@@ -1,10 +1,9 @@
 import { io, Socket } from 'socket.io-client';
 
-// Use VITE_API_URL if provided, else in DEV use localhost:8080, else in PROD use relative /api
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8080/api' : '/api');
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 const getAuthHeaders = () => {
-    const token = localStorage.getItem('nanoboardweb_token');
+    const token = localStorage.getItem('nanoboard_token');
     return {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {})
@@ -13,7 +12,7 @@ const getAuthHeaders = () => {
 
 const handleResponse = async (res: Response) => {
     if (res.status === 401) {
-        localStorage.removeItem('nanoboardweb_token');
+        localStorage.removeItem('nanoboard_token');
         window.location.href = '/login';
         throw new Error('Unauthorized');
     }
@@ -153,124 +152,35 @@ export const networkApi = {
 
 // --- SESSION API ---
 export const sessionApi = {
-    list: async () => {
-        const res = await fetch(`${API_URL}/session/list`, { headers: getAuthHeaders() });
-        return handleResponse(res);
-    },
-    getMemory: async (id: string) => {
-        const res = await fetch(`${API_URL}/session/memory/${id}`, { headers: getAuthHeaders() });
-        return handleResponse(res);
-    },
-    saveMemory: async (id: string, content: string) => {
-        const res = await fetch(`${API_URL}/session/memory/${id}`, {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            body: JSON.stringify({ content })
-        });
-        return handleResponse(res);
-    },
-    delete: async (id: string) => {
-        const res = await fetch(`${API_URL}/session/delete/${id}`, {
-            method: 'POST',
-            headers: getAuthHeaders()
-        });
-        return handleResponse(res);
-    }
+    list: async () => { return { sessions: [] } as any; },
+    getMemory: async (_id: string) => { return { content: '' } as any; },
+    saveMemory: async (_id: string, _content: string) => { return { success: true } as any; },
+    delete: async (_id: string) => { return { success: true } as any; }
 };
 
 // --- SKILL API ---
 export const skillApi = {
-    list: async () => {
-        const res = await fetch(`${API_URL}/skill/list`, { headers: getAuthHeaders() });
-        return handleResponse(res);
-    },
-    getContent: async (id: string) => {
-        const res = await fetch(`${API_URL}/skill/${id}/content`, { headers: getAuthHeaders() });
-        return handleResponse(res);
-    },
-    toggle: async (id: string, enabled: boolean) => {
-        const res = await fetch(`${API_URL}/skill/${id}/toggle`, {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            body: JSON.stringify({ enabled })
-        });
-        return handleResponse(res);
-    },
-    delete: async (id: string) => {
-        const res = await fetch(`${API_URL}/skill/${id}/delete`, {
-            method: 'POST',
-            headers: getAuthHeaders()
-        });
-        return handleResponse(res);
-    },
-    save: async (name: string, content: string) => {
-        const res = await fetch(`${API_URL}/skill/save`, {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            body: JSON.stringify({ name, content })
-        });
-        return handleResponse(res);
-    }
+    list: async () => { return { skills: [] } as any; },
+    getContent: async (_id: string) => { return { success: true, content: '' } as any; },
+    toggle: async (_id: string, _enabled: boolean) => { return { success: true, enabled: _enabled } as any; },
+    delete: async (_id: string) => { return { success: true } as any; },
+    save: async (_name: string, _content: string) => { return { success: true } as any; }
 };
 
 // --- CHAT SESSION API ---
 export const chatSessionApi = {
-    list: async () => {
-        const res = await fetch(`${API_URL}/session/chat/list`, { headers: getAuthHeaders() });
-        return handleResponse(res);
-    },
-    getContent: async (id: string) => {
-        const res = await fetch(`${API_URL}/session/chat/${id}`, { headers: getAuthHeaders() });
-        return handleResponse(res);
-    }
+    list: async () => { return { sessions: [] } as any; },
+    getContent: async (_id: string) => { return { success: true, messages: [] } as any; }
 };
 
 // --- CRON API ---
 export const cronApi = {
-    list: async () => {
-        const res = await fetch(`${API_URL}/cron/list`, { headers: getAuthHeaders() });
-        return handleResponse(res);
-    },
-    add: async (name: string, message: string, schedule_type: string, schedule_value: string, timezone?: string) => {
-        const res = await fetch(`${API_URL}/cron/add`, {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            body: JSON.stringify({ job: { name, message, schedule_type, schedule_value, timezone, enabled: true } })
-        });
-        return handleResponse(res);
-    },
-    update: async (id: string, name: string, message: string, schedule_type: string, schedule_value: string, enabled: boolean, timezone?: string) => {
-        const res = await fetch(`${API_URL}/cron/update`, {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            body: JSON.stringify({ job: { id, name, message, schedule_type, schedule_value, enabled, timezone } })
-        });
-        return handleResponse(res);
-    },
-    remove: async (id: string) => {
-        const res = await fetch(`${API_URL}/cron/remove`, {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            body: JSON.stringify({ id })
-        });
-        return handleResponse(res);
-    },
-    enable: async (id: string, disable: boolean) => {
-        const res = await fetch(`${API_URL}/cron/enable`, {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            body: JSON.stringify({ id, disable })
-        });
-        return handleResponse(res);
-    },
-    run: async (id: string) => {
-        const res = await fetch(`${API_URL}/cron/run`, {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            body: JSON.stringify({ id })
-        });
-        return handleResponse(res);
-    }
+    list: async () => { return { success: true, jobs: [] } as any; },
+    add: async (..._args: any[]) => { return { success: true } as any; },
+    update: async (..._args: any[]) => { return { success: true } as any; },
+    remove: async (_id: string) => { return { success: true } as any; },
+    enable: async (_id: string, _disable: boolean) => { return { success: true } as any; },
+    run: async (_id: string) => { return { success: true } as any; }
 };
 
 // --- THEME API ---
@@ -286,10 +196,8 @@ let logListeners: ((logs: string[]) => void)[] = [];
 
 function getSocket() {
     if (!socket) {
-        // Find the base URL for the socket connection by stripping the /api suffix (or keeping empty string for relative paths)
-        const socketUrl = API_URL === '/api' ? '' : API_URL.replace(/\/api$/, '');
-        socket = io(socketUrl, {
-            auth: { token: localStorage.getItem('nanoboardweb_token') }
+        socket = io(API_URL.replace('/api', ''), {
+            auth: { token: localStorage.getItem('nanoboard_token') }
         });
         socket.on('log-update', (logs: string[]) => {
             logListeners.forEach(listener => listener(logs));

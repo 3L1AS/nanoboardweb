@@ -10,6 +10,25 @@ const WORKSPACE_DIR = path.join(NANOBOT_DIR, 'workspace');
 
 sessionRouter.use(authenticateJWT);
 
+function getSessionFilePath(baseDir: string, sessionId: string): string | null {
+    const dirPath = path.join(baseDir, sessionId);
+    if (fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()) {
+        const files = fs.readdirSync(dirPath);
+        const mdFile = files.find(f => f.endsWith('.md')) || files.find(f => f.endsWith('.json'));
+        if (mdFile) return path.join(dirPath, mdFile);
+    } else {
+        const mdPath = path.join(baseDir, `${sessionId}.md`);
+        if (fs.existsSync(mdPath)) return mdPath;
+        const jsonPath = path.join(baseDir, `${sessionId}.json`);
+        if (fs.existsSync(jsonPath)) return jsonPath;
+        const exactPath = path.join(baseDir, sessionId);
+        if (fs.existsSync(exactPath)) return exactPath;
+    }
+    return null;
+}
+
+// ================= MEMORY API =================
+
 sessionRouter.get('/list', (req: Request, res: Response) => {
     try {
         const memoryDir = path.join(WORKSPACE_DIR, 'memory');
@@ -21,12 +40,16 @@ sessionRouter.get('/list', (req: Request, res: Response) => {
         const sessions = [];
 
         for (const file of files) {
-            if (file.endsWith('.json') || file.endsWith('.md')) {
-                const filePath = path.join(memoryDir, file);
-                const stat = fs.statSync(filePath);
+            const filePath = path.join(memoryDir, file);
+            let stat;
+            try {
+                stat = fs.statSync(filePath);
+            } catch (e) { continue; }
+
+            if (stat.isDirectory() || file.endsWith('.json') || file.endsWith('.md')) {
                 sessions.push({
                     id: file,
-                    name: file.replace(/\.(json|md)$/, ''),
+                    name: stat.isDirectory() ? file : file.replace(/\.(json|md)$/, ''),
                     path: filePath,
                     modified: Math.floor(stat.mtimeMs / 1000),
                     size: stat.size
@@ -35,7 +58,6 @@ sessionRouter.get('/list', (req: Request, res: Response) => {
         }
 
         sessions.sort((a, b) => b.modified - a.modified);
-
         res.json({ sessions, total: sessions.length });
     } catch (error) {
         res.status(500).json({ error: String(error) });
@@ -44,11 +66,13 @@ sessionRouter.get('/list', (req: Request, res: Response) => {
 
 sessionRouter.get('/memory/:id', (req: Request, res: Response) => {
     try {
-        const memoryFile = path.join(WORKSPACE_DIR, 'memory', String(req.params.id));
-        if (!fs.existsSync(memoryFile)) {
+        const memoryDir = path.join(WORKSPACE_DIR, 'memory');
+        const filePath = getSessionFilePath(memoryDir, String(req.params.id));
+
+        if (!filePath) {
             return res.json({ content: '' });
         }
-        const content = fs.readFileSync(memoryFile, 'utf8');
+        const content = fs.readFileSync(filePath, 'utf8');
         res.json({ content });
     } catch (error) {
         res.status(500).json({ error: String(error) });
@@ -59,10 +83,16 @@ sessionRouter.post('/memory/:id', (req: Request, res: Response) => {
     try {
         const { content } = req.body;
         const memoryDir = path.join(WORKSPACE_DIR, 'memory');
-        const memoryFile = path.join(memoryDir, String(req.params.id));
+        const sessionId = String(req.params.id);
 
-        fs.mkdirSync(memoryDir, { recursive: true });
-        fs.writeFileSync(memoryFile, content, 'utf8');
+        let filePath = getSessionFilePath(memoryDir, sessionId);
+        if (!filePath) {
+            // New memory
+            filePath = path.join(memoryDir, sessionId.endsWith('.md') || sessionId.endsWith('.json') ? sessionId : `${sessionId}.md`);
+        }
+
+        fs.mkdirSync(path.dirname(filePath), { recursive: true });
+        fs.writeFileSync(filePath, content, 'utf8');
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: String(error) });
@@ -71,11 +101,103 @@ sessionRouter.post('/memory/:id', (req: Request, res: Response) => {
 
 sessionRouter.post('/delete/:id', (req: Request, res: Response) => {
     try {
-        const memoryFile = path.join(WORKSPACE_DIR, 'memory', String(req.params.id));
-        if (fs.existsSync(memoryFile)) {
-            fs.unlinkSync(memoryFile);
+        const memoryDir = path.join(WORKSPACE_DIR, 'memory');
+        const sessionId = String(req.params.id);
+
+        const dirPath = path.join(memoryDir, sessionId);
+        if (fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()) {
+            fs.rmSync(dirPath, { recursive: true, force: true });
+        } else {
+            const filePath = getSessionFilePath(memoryDir, sessionId);
+            if (filePath) fs.unlinkSync(filePath);
         }
+
         res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: String(error) });
+    }
+});
+
+// ================= CHAT SESSION API =================
+
+sessionRouter.get('/chat/list', (req: Request, res: Response) => {
+    try {
+        const chatDir = path.join(WORKSPACE_DIR, 'sessions');
+        if (!fs.existsSync(chatDir)) {
+            return res.json({ sessions: [] });
+        }
+
+        const files = fs.readdirSync(chatDir);
+        const sessions = [];
+
+        for (const file of files) {
+            const filePath = path.join(chatDir, file);
+            let stat;
+            try {
+                stat = fs.statSync(filePath);
+            } catch (e) { continue; }
+
+            if (stat.isDirectory() || file.endsWith('.json') || file.endsWith('.md')) {
+                sessions.push({
+                    id: file,
+                    name: stat.isDirectory() ? file : file.replace(/\.(json|md)$/, ''),
+                    title: `Session ${stat.isDirectory() ? file : file.replace(/\.(json|md)$/, '')}`,
+                    path: filePath,
+                    modified: Math.floor(stat.mtimeMs / 1000),
+                    size: stat.size
+                });
+            }
+        }
+
+        sessions.sort((a, b) => b.modified - a.modified);
+        res.json({ sessions, total: sessions.length });
+    } catch (error) {
+        res.status(500).json({ error: String(error) });
+    }
+});
+
+sessionRouter.get('/chat/:id', (req: Request, res: Response) => {
+    try {
+        const chatDir = path.join(WORKSPACE_DIR, 'sessions');
+        const filePath = getSessionFilePath(chatDir, String(req.params.id));
+
+        if (!filePath) {
+            return res.json({ success: false, messages: [], message: 'Not found' });
+        }
+
+        // Let's try to parse the file. Nanobot sessions are usually JSON arrays or objects
+        const content = fs.readFileSync(filePath, 'utf8');
+        let messages = [];
+        try {
+            const parsed = JSON.parse(content);
+            // Adapt based on typical Nanobot session format
+            if (Array.isArray(parsed)) {
+                // If the array itself is messages
+                messages = parsed;
+            } else if (parsed.messages && Array.isArray(parsed.messages)) {
+                messages = parsed.messages;
+            } else if (parsed.history && Array.isArray(parsed.history)) {
+                messages = parsed.history;
+            } else {
+                // Fallback, just render it as a system message
+                messages = [{ role: 'system', content: `Raw JSON data from ${path.basename(filePath)}\n\`\`\`json\n${JSON.stringify(parsed, null, 2)}\n\`\`\`` }];
+            }
+
+            // Normalize message format
+            messages = messages.map((m: any) => ({
+                role: m.role || 'system',
+                content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content || m)
+            }));
+
+        } catch (e) {
+            // Not JSON, return as markdown
+            messages = [
+                { role: 'system', content: `Raw content from ${path.basename(filePath)}` },
+                { role: 'assistant', content }
+            ];
+        }
+
+        res.json({ success: true, messages });
     } catch (error) {
         res.status(500).json({ error: String(error) });
     }
