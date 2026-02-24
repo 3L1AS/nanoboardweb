@@ -153,35 +153,118 @@ export const networkApi = {
 
 // --- SESSION API ---
 export const sessionApi = {
-    list: async () => { return { sessions: [] } as any; },
-    getMemory: async (_id: string) => { return { content: '' } as any; },
-    saveMemory: async (_id: string, _content: string) => { return { success: true } as any; },
-    delete: async (_id: string) => { return { success: true } as any; }
+    list: async () => {
+        const res = await fetch(`${API_URL}/session/list`, { headers: getAuthHeaders() });
+        return handleResponse(res);
+    },
+    getMemory: async (id: string) => {
+        const res = await fetch(`${API_URL}/session/memory/${id}`, { headers: getAuthHeaders() });
+        return handleResponse(res);
+    },
+    saveMemory: async (id: string, content: string) => {
+        const res = await fetch(`${API_URL}/session/memory/${id}`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ content })
+        });
+        return handleResponse(res);
+    },
+    delete: async (id: string) => {
+        const res = await fetch(`${API_URL}/session/delete/${id}`, {
+            method: 'POST',
+            headers: getAuthHeaders()
+        });
+        return handleResponse(res);
+    }
 };
 
 // --- SKILL API ---
 export const skillApi = {
-    list: async () => { return { skills: [] } as any; },
-    getContent: async (_id: string) => { return { success: true, content: '' } as any; },
-    toggle: async (_id: string, _enabled: boolean) => { return { success: true, enabled: _enabled } as any; },
-    delete: async (_id: string) => { return { success: true } as any; },
-    save: async (_name: string, _content: string) => { return { success: true } as any; }
+    list: async () => {
+        const res = await fetch(`${API_URL}/skill/list`, { headers: getAuthHeaders() });
+        return handleResponse(res);
+    },
+    getContent: async (id: string) => {
+        const res = await fetch(`${API_URL}/skill/${id}/content`, { headers: getAuthHeaders() });
+        return handleResponse(res);
+    },
+    toggle: async (id: string, enabled: boolean) => {
+        const res = await fetch(`${API_URL}/skill/${id}/toggle`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ enabled })
+        });
+        return handleResponse(res);
+    },
+    delete: async (id: string) => {
+        const res = await fetch(`${API_URL}/skill/${id}/delete`, {
+            method: 'POST',
+            headers: getAuthHeaders()
+        });
+        return handleResponse(res);
+    },
+    save: async (name: string, content: string) => {
+        const res = await fetch(`${API_URL}/skill/save`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ name, content })
+        });
+        return handleResponse(res);
+    }
 };
 
 // --- CHAT SESSION API ---
 export const chatSessionApi = {
-    list: async () => { return { sessions: [] } as any; },
-    getContent: async (_id: string) => { return { success: true, messages: [] } as any; }
+    list: async () => { return { sessions: [] }; },
+    getContent: async (_id: string) => { return { success: true, messages: [] }; }
 };
 
 // --- CRON API ---
 export const cronApi = {
-    list: async () => { return { success: true, jobs: [] } as any; },
-    add: async (..._args: any[]) => { return { success: true } as any; },
-    update: async (..._args: any[]) => { return { success: true } as any; },
-    remove: async (_id: string) => { return { success: true } as any; },
-    enable: async (_id: string, _disable: boolean) => { return { success: true } as any; },
-    run: async (_id: string) => { return { success: true } as any; }
+    list: async () => {
+        const res = await fetch(`${API_URL}/cron/list`, { headers: getAuthHeaders() });
+        return handleResponse(res);
+    },
+    add: async (job: any) => {
+        const res = await fetch(`${API_URL}/cron/add`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ job })
+        });
+        return handleResponse(res);
+    },
+    update: async (job: any) => {
+        const res = await fetch(`${API_URL}/cron/update`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ job })
+        });
+        return handleResponse(res);
+    },
+    remove: async (id: string) => {
+        const res = await fetch(`${API_URL}/cron/remove`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ id })
+        });
+        return handleResponse(res);
+    },
+    enable: async (id: string, disable: boolean) => {
+        const res = await fetch(`${API_URL}/cron/enable`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ id, disable })
+        });
+        return handleResponse(res);
+    },
+    run: async (id: string) => {
+        const res = await fetch(`${API_URL}/cron/run`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ id })
+        });
+        return handleResponse(res);
+    }
 };
 
 // --- THEME API ---

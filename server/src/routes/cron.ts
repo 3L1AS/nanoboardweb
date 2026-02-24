@@ -19,8 +19,18 @@ cronRouter.get('/list', (req: Request, res: Response) => {
         if (!fs.existsSync(JOBS_FILE)) {
             return res.json({ success: true, jobs: [] });
         }
+
         const data = fs.readFileSync(JOBS_FILE, 'utf8');
-        res.json(JSON.parse(data));
+        if (!data || data.trim() === '') {
+            return res.json({ success: true, jobs: [] });
+        }
+
+        const parsed = JSON.parse(data);
+
+        // Ensure robust return shape regardless of whether nanobot stores an array or {jobs: []} object
+        const jobsList = Array.isArray(parsed) ? parsed : (parsed.jobs || []);
+
+        res.json({ success: true, jobs: jobsList });
     } catch (error) {
         res.status(500).json({ error: String(error) });
     }
@@ -29,19 +39,22 @@ cronRouter.get('/list', (req: Request, res: Response) => {
 cronRouter.post('/add', (req: Request, res: Response) => {
     try {
         const { job } = req.body;
-
-        // Ensure dir exists
         fs.mkdirSync(CRON_DIR, { recursive: true });
 
-        let data: any = { success: true, jobs: [] };
+        let parsed: any = [];
         if (fs.existsSync(JOBS_FILE)) {
-            data = JSON.parse(fs.readFileSync(JOBS_FILE, 'utf8'));
+            const data = fs.readFileSync(JOBS_FILE, 'utf8');
+            if (data.trim() !== '') parsed = JSON.parse(data);
         }
 
-        job.id = `job_${Date.now()}`;
-        data.jobs.push(job);
+        const isArray = Array.isArray(parsed);
+        const jobsList = isArray ? parsed : (parsed.jobs || []);
 
-        fs.writeFileSync(JOBS_FILE, JSON.stringify(data, null, 2), 'utf8');
+        job.id = `job_${Date.now()}`;
+        jobsList.push(job);
+
+        const output = isArray ? jobsList : { ...parsed, jobs: jobsList };
+        fs.writeFileSync(JOBS_FILE, JSON.stringify(output, null, 2), 'utf8');
         res.json({ success: true, job });
     } catch (error) {
         res.status(500).json({ error: String(error) });
@@ -53,12 +66,17 @@ cronRouter.post('/update', (req: Request, res: Response) => {
         const { job } = req.body;
 
         if (fs.existsSync(JOBS_FILE)) {
-            const data = JSON.parse(fs.readFileSync(JOBS_FILE, 'utf8'));
-            const index = data.jobs.findIndex((j: any) => j.id === job.id);
+            const data = fs.readFileSync(JOBS_FILE, 'utf8');
+            const parsed = JSON.parse(data);
+            const isArray = Array.isArray(parsed);
+            const jobsList = isArray ? parsed : (parsed.jobs || []);
+
+            const index = jobsList.findIndex((j: any) => j.id === job.id);
             if (index !== -1) {
-                data.jobs[index] = { ...data.jobs[index], ...job };
-                fs.writeFileSync(JOBS_FILE, JSON.stringify(data, null, 2), 'utf8');
-                return res.json({ success: true, job: data.jobs[index] });
+                jobsList[index] = { ...jobsList[index], ...job };
+                const output = isArray ? jobsList : { ...parsed, jobs: jobsList };
+                fs.writeFileSync(JOBS_FILE, JSON.stringify(output, null, 2), 'utf8');
+                return res.json({ success: true, job: jobsList[index] });
             }
         }
 
@@ -73,9 +91,15 @@ cronRouter.post('/remove', (req: Request, res: Response) => {
         const { id } = req.body;
 
         if (fs.existsSync(JOBS_FILE)) {
-            const data = JSON.parse(fs.readFileSync(JOBS_FILE, 'utf8'));
-            data.jobs = data.jobs.filter((j: any) => j.id !== id);
-            fs.writeFileSync(JOBS_FILE, JSON.stringify(data, null, 2), 'utf8');
+            const data = fs.readFileSync(JOBS_FILE, 'utf8');
+            const parsed = JSON.parse(data);
+            const isArray = Array.isArray(parsed);
+            let jobsList = isArray ? parsed : (parsed.jobs || []);
+
+            jobsList = jobsList.filter((j: any) => j.id !== id);
+
+            const output = isArray ? jobsList : { ...parsed, jobs: jobsList };
+            fs.writeFileSync(JOBS_FILE, JSON.stringify(output, null, 2), 'utf8');
         }
 
         res.json({ success: true });
@@ -89,11 +113,16 @@ cronRouter.post('/enable', (req: Request, res: Response) => {
         const { id, disable } = req.body;
 
         if (fs.existsSync(JOBS_FILE)) {
-            const data = JSON.parse(fs.readFileSync(JOBS_FILE, 'utf8'));
-            const job = data.jobs.find((j: any) => j.id === id);
+            const data = fs.readFileSync(JOBS_FILE, 'utf8');
+            const parsed = JSON.parse(data);
+            const isArray = Array.isArray(parsed);
+            const jobsList = isArray ? parsed : (parsed.jobs || []);
+
+            const job = jobsList.find((j: any) => j.id === id);
             if (job) {
                 job.enabled = !disable;
-                fs.writeFileSync(JOBS_FILE, JSON.stringify(data, null, 2), 'utf8');
+                const output = isArray ? jobsList : { ...parsed, jobs: jobsList };
+                fs.writeFileSync(JOBS_FILE, JSON.stringify(output, null, 2), 'utf8');
             }
         }
 
@@ -108,7 +137,6 @@ cronRouter.post('/run', async (req: Request, res: Response) => {
         const { id } = req.body;
         const CONTAINER_NAME = process.env.NANOBOT_CONTAINER_NAME || 'nanobot';
 
-        // Let the actual Nanobot execute the cron job immediately via docker exec
         await execFilePromise('docker', ['exec', CONTAINER_NAME, 'python', '-m', 'nanobot.cron', '--run', id]);
 
         res.json({ success: true });
