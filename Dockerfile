@@ -7,12 +7,14 @@ WORKDIR /app
 COPY package*.json ./
 COPY server/package*.json ./server/
 RUN npm install
+RUN cd server && npm install
 
 # Copy source code
 COPY . .
 
 # Build frontend and backend
 RUN npm run build
+RUN cd server && npm run build
 
 # Production stage
 FROM node:18-alpine
