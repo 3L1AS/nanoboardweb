@@ -289,7 +289,7 @@ export default function Workspace() {
       setImageContentUrl(null);
 
       // Check for common image extensions
-      if (item.name.match(/\\.(png|jpe?g|gif|webp|svg|bmp|ico)$/i)) {
+      if (item.name.match(/\.(png|jpe?g|gif|webp|svg|bmp|ico)$/i)) {
         const blob = await fsApi.getFileBlob(item.relative_path);
         const url = URL.createObjectURL(blob);
         setImageContentUrl(url);
