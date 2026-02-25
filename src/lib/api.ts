@@ -79,6 +79,19 @@ export const fsApi = {
         const res = await fetch(`${API_URL}/fs/content?path=${path}`, { headers: getAuthHeaders() });
         return handleResponse(res);
     },
+    getFileBlob: async (path: string) => {
+        const res = await fetch(`${API_URL}/fs/file?path=${path}`, { headers: getAuthHeaders() });
+        if (res.status === 401) {
+            localStorage.removeItem('nanoboardweb_token');
+            window.location.href = '/login';
+            throw new Error('Unauthorized');
+        }
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.error || 'API Request failed');
+        }
+        return res.blob();
+    },
     saveFile: async (path: string, content: string) => {
         const res = await fetch(`${API_URL}/fs/save`, {
             method: 'POST',

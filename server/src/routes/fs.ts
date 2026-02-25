@@ -62,6 +62,24 @@ fsRouter.get('/content', (req: Request, res: Response) => {
     }
 });
 
+fsRouter.get('/file', (req: Request, res: Response) => {
+    const relativePath = req.query.path as string;
+    if (!relativePath) return res.status(400).json({ error: 'Path is required' });
+
+    const targetPath = path.resolve(NANOBOT_DIR, relativePath);
+
+    if (!targetPath.startsWith(path.resolve(NANOBOT_DIR))) {
+        return res.status(403).json({ error: 'Access denied' });
+    }
+
+    try {
+        if (!fs.existsSync(targetPath)) return res.status(404).json({ error: 'File not found' });
+        res.sendFile(targetPath);
+    } catch (error) {
+        res.status(500).json({ error: String(error) });
+    }
+});
+
 fsRouter.post('/save', (req: Request, res: Response) => {
     const { path: relativePath, content } = req.body;
     if (!relativePath) return res.status(400).json({ error: 'Path is required' });
