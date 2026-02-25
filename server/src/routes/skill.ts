@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import { authenticateJWT } from '../middlewares/auth';
 import fs from 'fs';
 import path from 'path';
+import { sendInternalError } from '../utils/httpErrors';
+import { isSafePathToken, resolveWithinBase } from '../utils/pathSecurity';
 
 export const skillRouter = Router();
 
@@ -11,16 +13,24 @@ const SKILLS_DIR = path.join(NANOBOT_DIR, 'workspace', 'skills');
 skillRouter.use(authenticateJWT);
 
 function getSkillFilePath(skillId: string): string | null {
-    const dirPath = path.join(SKILLS_DIR, skillId);
+    if (!isSafePathToken(skillId)) {
+        return null;
+    }
+
+    const dirPath = resolveWithinBase(SKILLS_DIR, skillId);
+    if (!dirPath) {
+        return null;
+    }
+
     if (fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()) {
         const files = fs.readdirSync(dirPath);
         const mdFile = files.find(f => f.endsWith('.md')) || files.find(f => f.endsWith('.json'));
-        if (mdFile) return path.join(dirPath, mdFile);
+        if (mdFile) return resolveWithinBase(dirPath, mdFile);
     } else {
-        const mdPath = path.join(SKILLS_DIR, `${skillId}.md`);
-        if (fs.existsSync(mdPath)) return mdPath;
-        const jsonPath = path.join(SKILLS_DIR, `${skillId}.json`);
-        if (fs.existsSync(jsonPath)) return jsonPath;
+        const mdPath = resolveWithinBase(SKILLS_DIR, `${skillId}.md`);
+        if (mdPath && fs.existsSync(mdPath)) return mdPath;
+        const jsonPath = resolveWithinBase(SKILLS_DIR, `${skillId}.json`);
+        if (jsonPath && fs.existsSync(jsonPath)) return jsonPath;
     }
     return null;
 }
@@ -100,13 +110,16 @@ skillRouter.get('/list', (req: Request, res: Response) => {
 
         res.json({ skills });
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error);
     }
 });
 
 skillRouter.get('/:id/content', (req: Request, res: Response) => {
     try {
         const skillId = String(req.params.id);
+        if (!isSafePathToken(skillId)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
         const filePath = getSkillFilePath(skillId);
 
         if (!filePath) {
@@ -116,7 +129,7 @@ skillRouter.get('/:id/content', (req: Request, res: Response) => {
         const content = fs.readFileSync(filePath, 'utf8');
         res.json({ success: true, content });
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error);
     }
 });
 
@@ -126,14 +139,21 @@ skillRouter.post('/:id/toggle', (req: Request, res: Response) => {
         const { enabled } = req.body;
         res.json({ success: true, enabled });
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error);
     }
 });
 
 skillRouter.post('/:id/delete', (req: Request, res: Response) => {
     try {
         const skillId = String(req.params.id);
-        const dirPath = path.join(SKILLS_DIR, skillId);
+        if (!isSafePathToken(skillId)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+        const dirPath = resolveWithinBase(SKILLS_DIR, skillId);
+
+        if (!dirPath) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
 
         if (fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()) {
             fs.rmSync(dirPath, { recursive: true, force: true });
@@ -143,16 +163,26 @@ skillRouter.post('/:id/delete', (req: Request, res: Response) => {
         }
         res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error);
     }
 });
 
 skillRouter.post('/save', (req: Request, res: Response) => {
     try {
         const { name, content } = req.body;
+        if (typeof name !== 'string' || typeof content !== 'string') {
+            return res.status(400).json({ error: 'Invalid request' });
+        }
 
         // Find if this name matches an existing skill to overwrite it
-        let skillId = name.toLowerCase().replace(/\s+/g, '_');
+        const skillId = name
+            .toLowerCase()
+            .trim()
+            .replace(/\s+/g, '_')
+            .replace(/[^a-z0-9_-]/g, '');
+        if (!skillId) {
+            return res.status(400).json({ error: 'Invalid skill name' });
+        }
         let isExistingDirectory = false;
 
         if (fs.existsSync(SKILLS_DIR)) {
@@ -172,13 +202,16 @@ skillRouter.post('/save', (req: Request, res: Response) => {
             const mdFile = files.find(f => f.endsWith('.md')) || 'SKILL.md';
             fs.writeFileSync(path.join(dirPath, mdFile), content, 'utf8');
         } else {
-            const skillFile = path.join(SKILLS_DIR, `${skillId}.md`);
+            const skillFile = resolveWithinBase(SKILLS_DIR, `${skillId}.md`);
+            if (!skillFile) {
+                return res.status(403).json({ error: 'Access denied' });
+            }
             fs.writeFileSync(skillFile, content, 'utf8');
         }
 
         res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error);
     }
 });
 

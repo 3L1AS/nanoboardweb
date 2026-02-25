@@ -34,8 +34,10 @@ Create a `docker-compose.yml` file. You can find an example template in `docker-
 
 Ensure that:
 - Your `NANOBOARDWEB_PASSWORD` is set to a secure password.
+- `JWT_SECRET` is set to a long random secret (required).
 - Both `nanoboardweb` and `nanobot` services mount the exact same volume (e.g., `/root/.nanobot:/root/.nanobot`).
 - The docker socket `/var/run/docker.sock` is mounted so NanoboardWeb can control the Nanobot container.
+- (Optional) `NANOBOARDWEB_CORS_ORIGINS` is configured if your frontend is served from a different origin.
 
 ### 2. Start Services
 ```bash
@@ -43,9 +45,18 @@ docker-compose up -d --build
 ```
 
 ### 3. Access Dashboard
-Navigate to `http://<YOUR_VPS_IP>:8080` in your web browser and log in with your configured password.
+For public deployments, place NanoboardWeb behind an HTTPS reverse proxy (Nginx/Caddy/Traefik) and access it via `https://<YOUR_DOMAIN>`.
+
+For local/private testing only, you can access `http://<YOUR_VPS_IP>:8080`.
 
 For detailed deployment instructions, please see [DEPLOYMENT.md](DEPLOYMENT.md).
+
+## Security Notes
+
+- `JWT_SECRET` is required and the server will not start without it.
+- Login requests are rate-limited to reduce password brute-force risk.
+- API and Socket.IO CORS are restricted by origin allowlist (`NANOBOARDWEB_CORS_ORIGINS`) or same-origin defaults.
+- The container typically mounts `/var/run/docker.sock`; treat NanoboardWeb as a highly privileged admin service and do not expose it broadly.
 
 ## Local Development
 
@@ -93,6 +104,7 @@ nanoboardweb/
 │   ├── package.json        # Backend Dependencies
 │   └── tsconfig.json       # TypeScript configuration
 ├── DEPLOYMENT.md           # VPS Deployment Guide
+├── CHANGELOG.md            # Release / change history
 ├── Dockerfile              # Docker build specification
 ├── docker-compose.example.yml
 ├── package.json            # Root workspace configuration

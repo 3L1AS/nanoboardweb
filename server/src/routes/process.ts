@@ -3,6 +3,7 @@ import { execFile } from 'child_process';
 import util from 'util';
 import os from 'os';
 import { authenticateJWT } from '../middlewares/auth';
+import { sendInternalError } from '../utils/httpErrors';
 
 const execFilePromise = util.promisify(execFile);
 export const processRouter = Router();
@@ -18,7 +19,8 @@ processRouter.get('/status', async (req: Request, res: Response) => {
         res.json({ running: isRunning });
     } catch (error) {
         // If command fails, container might not exist or is stopped
-        res.json({ running: false, error: String(error) });
+        console.warn('Failed to inspect container status', error);
+        res.json({ running: false });
     }
 });
 
@@ -27,7 +29,7 @@ processRouter.post('/start', async (req: Request, res: Response) => {
         await execFilePromise('docker', ['start', CONTAINER_NAME]);
         res.json({ success: true, message: 'Container started' });
     } catch (error) {
-        res.status(500).json({ success: false, error: String(error) });
+        return sendInternalError(res, error, 'Failed to start container');
     }
 });
 
@@ -36,7 +38,7 @@ processRouter.post('/stop', async (req: Request, res: Response) => {
         await execFilePromise('docker', ['stop', CONTAINER_NAME]);
         res.json({ success: true, message: 'Container stopped' });
     } catch (error) {
-        res.status(500).json({ success: false, error: String(error) });
+        return sendInternalError(res, error, 'Failed to stop container');
     }
 });
 
@@ -45,7 +47,7 @@ processRouter.post('/restart', async (req: Request, res: Response) => {
         await execFilePromise('docker', ['restart', CONTAINER_NAME]);
         res.json({ success: true, message: 'Container restarted' });
     } catch (error) {
-        res.status(500).json({ success: false, error: String(error) });
+        return sendInternalError(res, error, 'Failed to restart container');
     }
 });
 
@@ -96,7 +98,7 @@ processRouter.get('/dashboard', async (req: Request, res: Response) => {
 
         res.json(dashboardData);
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error);
     }
 });
 
@@ -104,10 +106,10 @@ processRouter.get('/logs', async (req: Request, res: Response) => {
     try {
         const limitStr = parseInt(req.query.limit as string) || 500;
         const limit = Math.min(Math.max(1, limitStr), 5000); // Sanitize and cap limit
-        const { stdout, stderr } = await execFilePromise('docker', ['logs', '--tail', String(limit), CONTAINER_NAME]).catch(err => ({ stdout: '', stderr: String(err) }));
-        const logs = [...stdout.split('\n'), ...stderr.split('\n')].filter(l => l.trim() !== '');
+        const { stdout } = await execFilePromise('docker', ['logs', '--tail', String(limit), CONTAINER_NAME]);
+        const logs = stdout.split('\n').filter(l => l.trim() !== '');
         res.json({ logs });
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error, 'Failed to read container logs');
     }
 });

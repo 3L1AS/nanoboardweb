@@ -12,10 +12,14 @@ services:
     environment:
       # Password to log into the web dashboard
       - NANOBOARDWEB_PASSWORD=your_secure_password_here
+      # REQUIRED: JWT signing secret (generate a long random string)
+      - JWT_SECRET=replace_with_a_long_random_secret
       # Name of the nanobot container to control
       - NANOBOT_CONTAINER_NAME=nanobot
       # Path to the mounted volume where configs and workspaces live inside this container
       - NANOBOT_DIR=/root/.nanobot
+      # Optional: comma-separated CORS allowlist for cross-origin frontend access (dev example below)
+      # - NANOBOARDWEB_CORS_ORIGINS=http://localhost:5173
     volumes:
       # Essential: Mount the host's Docker socket so NanoboardWeb can run `docker logs` and `docker restart`
       - /var/run/docker.sock:/var/run/docker.sock

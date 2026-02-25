@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { authenticateJWT } from '../middlewares/auth';
 import fs from 'fs';
 import path from 'path';
+import { sendInternalError } from '../utils/httpErrors';
 
 export const configRouter = Router();
 
@@ -20,7 +21,7 @@ configRouter.get('/load', (req: Request, res: Response) => {
         const config = JSON.parse(content);
         res.json(config);
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error);
     }
 });
 
@@ -31,7 +32,7 @@ configRouter.post('/save', (req: Request, res: Response) => {
         fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
         res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error);
     }
 });
 
@@ -44,6 +45,6 @@ configRouter.post('/validate', (req: Request, res: Response) => {
         }
         res.json({ valid: true });
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error);
     }
 });

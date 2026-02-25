@@ -7,7 +7,7 @@ import path from 'path';
 import { spawn } from 'child_process';
 import jwt from 'jsonwebtoken';
 
-import { authRouter } from './routes/auth';
+import { authRouter, JWT_SECRET } from './routes/auth';
 import { processRouter } from './routes/process';
 import { systemRouter } from './routes/system';
 import { fsRouter } from './routes/fs';
@@ -20,9 +20,35 @@ dotenv.config();
 
 const app = express();
 const server = createServer(app);
+const defaultCorsOrigins = process.env.NODE_ENV === 'production'
+    ? []
+    : ['http://localhost:5173', 'http://127.0.0.1:5173'];
+
+const configuredCorsOrigins = (process.env.NANOBOARDWEB_CORS_ORIGINS || '')
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean);
+
+const allowedCorsOrigins = configuredCorsOrigins.length > 0 ? configuredCorsOrigins : defaultCorsOrigins;
+
+const isSocketOriginAllowed = (origin?: string, hostHeader?: string | string[]) => {
+    if (!origin) return true;
+    if (allowedCorsOrigins.includes(origin)) return true;
+
+    const host = Array.isArray(hostHeader) ? hostHeader[0] : hostHeader;
+    if (!host) return false;
+
+    return origin === `http://${host}` || origin === `https://${host}`;
+};
+
 const io = new Server(server, {
+    // Use allowRequest as the enforcement layer so same-origin browser clients
+    // work without needing explicit host entries in NANOBOARDWEB_CORS_ORIGINS.
     cors: {
-        origin: '*',
+        origin: true,
+    },
+    allowRequest: (req, callback) => {
+        callback(null, isSocketOriginAllowed(req.headers.origin, req.headers.host));
     }
 });
 
@@ -30,7 +56,20 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 8080;
 
 // Middleware
-app.use(cors());
+app.disable('x-powered-by');
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin) {
+            return callback(null, true);
+        }
+
+        if (allowedCorsOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+
+        return callback(null, false);
+    }
+}));
 app.use(express.json());
 
 // API Routes
@@ -55,8 +94,6 @@ app.get('/*', (req, res) => {
 });
 
 // Socket.io for Realtime Logs
-const JWT_SECRET = process.env.JWT_SECRET || 'nanoboardweb_secret_key';
-
 io.use((socket, next) => {
     const token = socket.handshake.auth.token;
     if (token) {

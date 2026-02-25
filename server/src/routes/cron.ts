@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { execFile } from 'child_process';
 import util from 'util';
+import { sendInternalError } from '../utils/httpErrors';
 
 const execFilePromise = util.promisify(execFile);
 export const cronRouter = Router();
@@ -32,7 +33,7 @@ cronRouter.get('/list', (req: Request, res: Response) => {
 
         res.json({ success: true, jobs: jobsList });
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error);
     }
 });
 
@@ -57,7 +58,7 @@ cronRouter.post('/add', (req: Request, res: Response) => {
         fs.writeFileSync(JOBS_FILE, JSON.stringify(output, null, 2), 'utf8');
         res.json({ success: true, job });
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error);
     }
 });
 
@@ -82,7 +83,7 @@ cronRouter.post('/update', (req: Request, res: Response) => {
 
         res.status(404).json({ error: 'Job not found' });
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error);
     }
 });
 
@@ -104,7 +105,7 @@ cronRouter.post('/remove', (req: Request, res: Response) => {
 
         res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error);
     }
 });
 
@@ -128,7 +129,7 @@ cronRouter.post('/enable', (req: Request, res: Response) => {
 
         res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error);
     }
 });
 
@@ -141,6 +142,6 @@ cronRouter.post('/run', async (req: Request, res: Response) => {
 
         res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error);
     }
 });

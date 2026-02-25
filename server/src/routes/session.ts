@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import { authenticateJWT } from '../middlewares/auth';
 import fs from 'fs';
 import path from 'path';
+import { sendInternalError } from '../utils/httpErrors';
+import { isSafePathToken, resolveWithinBase } from '../utils/pathSecurity';
 
 export const sessionRouter = Router();
 
@@ -11,20 +13,30 @@ const WORKSPACE_DIR = path.join(NANOBOT_DIR, 'workspace');
 sessionRouter.use(authenticateJWT);
 
 function getSessionFilePath(baseDir: string, sessionId: string): string | null {
-    const dirPath = path.join(baseDir, sessionId);
+    if (!isSafePathToken(sessionId)) {
+        return null;
+    }
+
+    const dirPath = resolveWithinBase(baseDir, sessionId);
+    if (!dirPath) {
+        return null;
+    }
+
     if (fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()) {
         const files = fs.readdirSync(dirPath);
         const mdFile = files.find(f => f.endsWith('.md')) || files.find(f => f.endsWith('.json')) || files.find(f => f.endsWith('.jsonl'));
-        if (mdFile) return path.join(dirPath, mdFile);
+        if (mdFile) {
+            return resolveWithinBase(dirPath, mdFile);
+        }
     } else {
-        const mdPath = path.join(baseDir, `${sessionId}.md`);
-        if (fs.existsSync(mdPath)) return mdPath;
-        const jsonPath = path.join(baseDir, `${sessionId}.json`);
-        if (fs.existsSync(jsonPath)) return jsonPath;
-        const jsonlPath = path.join(baseDir, `${sessionId}.jsonl`);
-        if (fs.existsSync(jsonlPath)) return jsonlPath;
-        const exactPath = path.join(baseDir, sessionId);
-        if (fs.existsSync(exactPath)) return exactPath;
+        const mdPath = resolveWithinBase(baseDir, `${sessionId}.md`);
+        if (mdPath && fs.existsSync(mdPath)) return mdPath;
+        const jsonPath = resolveWithinBase(baseDir, `${sessionId}.json`);
+        if (jsonPath && fs.existsSync(jsonPath)) return jsonPath;
+        const jsonlPath = resolveWithinBase(baseDir, `${sessionId}.jsonl`);
+        if (jsonlPath && fs.existsSync(jsonlPath)) return jsonlPath;
+        const exactPath = resolveWithinBase(baseDir, sessionId);
+        if (exactPath && fs.existsSync(exactPath)) return exactPath;
     }
     return null;
 }
@@ -62,14 +74,18 @@ sessionRouter.get('/list', (req: Request, res: Response) => {
         sessions.sort((a, b) => b.modified - a.modified);
         res.json({ sessions, total: sessions.length });
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error);
     }
 });
 
 sessionRouter.get('/memory/:id', (req: Request, res: Response) => {
     try {
         const memoryDir = path.join(WORKSPACE_DIR, 'memory');
-        const filePath = getSessionFilePath(memoryDir, String(req.params.id));
+        const sessionId = String(req.params.id);
+        if (!isSafePathToken(sessionId)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+        const filePath = getSessionFilePath(memoryDir, sessionId);
 
         if (!filePath) {
             return res.json({ content: '' });
@@ -77,7 +93,7 @@ sessionRouter.get('/memory/:id', (req: Request, res: Response) => {
         const content = fs.readFileSync(filePath, 'utf8');
         res.json({ content });
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error);
     }
 });
 
@@ -86,18 +102,29 @@ sessionRouter.post('/memory/:id', (req: Request, res: Response) => {
         const { content } = req.body;
         const memoryDir = path.join(WORKSPACE_DIR, 'memory');
         const sessionId = String(req.params.id);
+        if (!isSafePathToken(sessionId)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
 
         let filePath = getSessionFilePath(memoryDir, sessionId);
         if (!filePath) {
             // New memory
-            filePath = path.join(memoryDir, sessionId.endsWith('.md') || sessionId.endsWith('.json') || sessionId.endsWith('.jsonl') ? sessionId : `${sessionId}.md`);
+            filePath = resolveWithinBase(
+                memoryDir,
+                sessionId.endsWith('.md') || sessionId.endsWith('.json') || sessionId.endsWith('.jsonl')
+                    ? sessionId
+                    : `${sessionId}.md`
+            );
+            if (!filePath) {
+                return res.status(403).json({ error: 'Access denied' });
+            }
         }
 
         fs.mkdirSync(path.dirname(filePath), { recursive: true });
         fs.writeFileSync(filePath, content, 'utf8');
         res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error);
     }
 });
 
@@ -105,8 +132,14 @@ sessionRouter.post('/delete/:id', (req: Request, res: Response) => {
     try {
         const memoryDir = path.join(WORKSPACE_DIR, 'memory');
         const sessionId = String(req.params.id);
+        if (!isSafePathToken(sessionId)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
 
-        const dirPath = path.join(memoryDir, sessionId);
+        const dirPath = resolveWithinBase(memoryDir, sessionId);
+        if (!dirPath) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
         if (fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()) {
             fs.rmSync(dirPath, { recursive: true, force: true });
         } else {
@@ -116,7 +149,7 @@ sessionRouter.post('/delete/:id', (req: Request, res: Response) => {
 
         res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error);
     }
 });
 
@@ -154,14 +187,18 @@ sessionRouter.get('/chat/list', (req: Request, res: Response) => {
         sessions.sort((a, b) => b.modified - a.modified);
         res.json({ sessions, total: sessions.length });
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error);
     }
 });
 
 sessionRouter.get('/chat/:id', (req: Request, res: Response) => {
     try {
         const chatDir = path.join(WORKSPACE_DIR, 'sessions');
-        const filePath = getSessionFilePath(chatDir, String(req.params.id));
+        const sessionId = String(req.params.id);
+        if (!isSafePathToken(sessionId)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+        const filePath = getSessionFilePath(chatDir, sessionId);
 
         if (!filePath) {
             return res.json({ success: false, messages: [], message: 'Not found' });
@@ -218,6 +255,6 @@ sessionRouter.get('/chat/:id', (req: Request, res: Response) => {
 
         res.json({ success: true, messages });
     } catch (error) {
-        res.status(500).json({ error: String(error) });
+        return sendInternalError(res, error);
     }
 });

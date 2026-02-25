@@ -29,8 +29,9 @@ cp docker-compose.example.yml docker-compose.yml
 nano docker-compose.yml
 ```
 
-Edit the `docker-compose.yml` to set your desired password and ensure the volume paths match your setup:
+Edit the `docker-compose.yml` to set your secrets and ensure the volume paths match your setup:
 - Change `NANOBOARDWEB_PASSWORD` to a secure password.
+- Set `JWT_SECRET` to a long random secret string (required for secure token signing).
 - Ensure `NANOBOT_CONTAINER_NAME` exactly matches the name of your already running nanobot container (e.g., `nanobot`).
 - Ensure the volume `/root/.nanobot:/root/.nanobot` points to where you currently have the Bot's configuration and workspaces stored.
 
@@ -53,8 +54,15 @@ docker logs nanoboardweb
 ```
 
 ### 5. Access the Dashboard
-Open your web browser and navigate to:
-`http://<YOUR_VPS_IP>:8080`
+Do not expose the dashboard directly over plain HTTP on the public internet.
+
+Recommended setup:
+- Bind the container port to localhost or a private network only.
+- Put Nginx / Caddy / Traefik in front of it with HTTPS (TLS).
+- Restrict access further with firewall rules, VPN, or IP allowlisting where possible.
+
+Then open your browser to your HTTPS endpoint (for example):
+`https://<YOUR_DOMAIN>`
 
 Log in using the password you set as `NANOBOARDWEB_PASSWORD`. From here, you can start, stop, view logs, and configure the Nanobot entirely via the web interface.
 
