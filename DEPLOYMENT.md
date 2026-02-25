@@ -66,6 +66,82 @@ Then open your browser to your HTTPS endpoint (for example):
 
 Log in using the password you set as `NANOBOARDWEB_PASSWORD`. From here, you can start, stop, view logs, and configure the Nanobot entirely via the web interface.
 
+### Example: Localhost Bind + Nginx/Caddy (Recommended)
+
+Update your `docker-compose.yml` so NanoboardWeb is not directly exposed to the internet:
+
+```yaml
+ports:
+  - "127.0.0.1:8080:8080"
+```
+
+This makes the dashboard reachable only from the VPS itself. Your reverse proxy (Nginx/Caddy) will then expose it securely on `443`.
+
+### Example: Firewall (UFW)
+
+Allow SSH + HTTPS, and block direct access to port `8080`:
+
+```bash
+sudo ufw allow 22/tcp
+sudo ufw allow 443/tcp
+sudo ufw deny 8080/tcp
+sudo ufw enable
+sudo ufw status
+```
+
+### Example: Nginx Reverse Proxy with IP Allowlist
+
+Replace `board.example.com` and the `allow` IPs with your own values:
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name board.example.com;
+
+    # Configure your TLS certs (Let's Encrypt or your existing certs)
+    ssl_certificate /etc/letsencrypt/live/board.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/board.example.com/privkey.pem;
+
+    location / {
+        # Optional but recommended: IP allowlist
+        allow 203.0.113.10;   # Home IP
+        allow 198.51.100.25;  # Office IP
+        deny all;
+
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+```
+
+### Example: Caddy Reverse Proxy with IP Allowlist
+
+Replace `board.example.com` and allowed IPs with your own values:
+
+```caddy
+board.example.com {
+    @blocked not remote_ip 203.0.113.10 198.51.100.25
+    respond @blocked 403
+
+    reverse_proxy 127.0.0.1:8080
+}
+```
+
+### Example: VPN-Only Access (Best for Admin Dashboards)
+
+If you use Tailscale or WireGuard:
+- Keep NanoboardWeb bound to `127.0.0.1:8080`
+- Expose it only through a reverse proxy reachable from your VPN
+- Do not create a public DNS record unless you also enforce IP allowlisting
+
+This significantly reduces exposure compared to a public login page.
+
 ---
 
 ## Troubleshooting
