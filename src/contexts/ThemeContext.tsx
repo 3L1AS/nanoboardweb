@@ -50,12 +50,14 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
   const toggleTheme = async () => {
     try {
-      const newTheme = await themeApi.toggleTheme();
-      if (newTheme) {
-        setThemeState(newTheme as Theme);
-      }
+      const newTheme = theme === "dark" ? "light" : "dark";
+      setThemeState(newTheme);
+      // Optional: let the backend know of the new theme, but don't await/block on it
+      themeApi.toggleTheme().catch(error => {
+        console.error("Failed to notify backend of theme toggle:", error);
+      });
     } catch (error) {
-      console.error("Failed to toggle theme:", error);
+      console.error("Failed to toggle theme locally:", error);
     }
   };
 
