@@ -14,13 +14,15 @@ function getSessionFilePath(baseDir: string, sessionId: string): string | null {
     const dirPath = path.join(baseDir, sessionId);
     if (fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()) {
         const files = fs.readdirSync(dirPath);
-        const mdFile = files.find(f => f.endsWith('.md')) || files.find(f => f.endsWith('.json'));
+        const mdFile = files.find(f => f.endsWith('.md')) || files.find(f => f.endsWith('.json')) || files.find(f => f.endsWith('.jsonl'));
         if (mdFile) return path.join(dirPath, mdFile);
     } else {
         const mdPath = path.join(baseDir, `${sessionId}.md`);
         if (fs.existsSync(mdPath)) return mdPath;
         const jsonPath = path.join(baseDir, `${sessionId}.json`);
         if (fs.existsSync(jsonPath)) return jsonPath;
+        const jsonlPath = path.join(baseDir, `${sessionId}.jsonl`);
+        if (fs.existsSync(jsonlPath)) return jsonlPath;
         const exactPath = path.join(baseDir, sessionId);
         if (fs.existsSync(exactPath)) return exactPath;
     }
@@ -46,10 +48,10 @@ sessionRouter.get('/list', (req: Request, res: Response) => {
                 stat = fs.statSync(filePath);
             } catch (e) { continue; }
 
-            if (stat.isDirectory() || file.endsWith('.json') || file.endsWith('.md')) {
+            if (stat.isDirectory() || file.endsWith('.json') || file.endsWith('.jsonl') || file.endsWith('.md')) {
                 sessions.push({
                     id: file,
-                    name: stat.isDirectory() ? file : file.replace(/\.(json|md)$/, ''),
+                    name: stat.isDirectory() ? file : file.replace(/\.(json|jsonl|md)$/, ''),
                     path: filePath,
                     modified: Math.floor(stat.mtimeMs / 1000),
                     size: stat.size
@@ -88,7 +90,7 @@ sessionRouter.post('/memory/:id', (req: Request, res: Response) => {
         let filePath = getSessionFilePath(memoryDir, sessionId);
         if (!filePath) {
             // New memory
-            filePath = path.join(memoryDir, sessionId.endsWith('.md') || sessionId.endsWith('.json') ? sessionId : `${sessionId}.md`);
+            filePath = path.join(memoryDir, sessionId.endsWith('.md') || sessionId.endsWith('.json') || sessionId.endsWith('.jsonl') ? sessionId : `${sessionId}.md`);
         }
 
         fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -137,11 +139,11 @@ sessionRouter.get('/chat/list', (req: Request, res: Response) => {
                 stat = fs.statSync(filePath);
             } catch (e) { continue; }
 
-            if (stat.isDirectory() || file.endsWith('.json') || file.endsWith('.md')) {
+            if (stat.isDirectory() || file.endsWith('.json') || file.endsWith('.jsonl') || file.endsWith('.md')) {
                 sessions.push({
                     id: file,
-                    name: stat.isDirectory() ? file : file.replace(/\.(json|md)$/, ''),
-                    title: `Session ${stat.isDirectory() ? file : file.replace(/\.(json|md)$/, '')}`,
+                    name: stat.isDirectory() ? file : file.replace(/\.(json|jsonl|md)$/, ''),
+                    title: `Session ${stat.isDirectory() ? file : file.replace(/\.(json|jsonl|md)$/, '')}`,
                     path: filePath,
                     modified: Math.floor(stat.mtimeMs / 1000),
                     size: stat.size
@@ -169,25 +171,42 @@ sessionRouter.get('/chat/:id', (req: Request, res: Response) => {
         const content = fs.readFileSync(filePath, 'utf8');
         let messages = [];
         try {
-            const parsed = JSON.parse(content);
-            // Adapt based on typical Nanobot session format
-            if (Array.isArray(parsed)) {
-                // If the array itself is messages
-                messages = parsed;
-            } else if (parsed.messages && Array.isArray(parsed.messages)) {
-                messages = parsed.messages;
-            } else if (parsed.history && Array.isArray(parsed.history)) {
-                messages = parsed.history;
+            if (filePath.endsWith('.jsonl')) {
+                messages = content.split('\\n')
+                    .filter(line => line.trim() !== '')
+                    .map(line => {
+                        try {
+                            const parsed = JSON.parse(line);
+                            return {
+                                role: parsed.role || 'system',
+                                content: typeof parsed.content === 'string' ? parsed.content : JSON.stringify(parsed.content || parsed)
+                            };
+                        } catch (e) {
+                            return null;
+                        }
+                    })
+                    .filter(m => m !== null);
             } else {
-                // Fallback, just render it as a system message
-                messages = [{ role: 'system', content: `Raw JSON data from ${path.basename(filePath)}\n\`\`\`json\n${JSON.stringify(parsed, null, 2)}\n\`\`\`` }];
-            }
+                const parsed = JSON.parse(content);
+                // Adapt based on typical Nanobot session format
+                if (Array.isArray(parsed)) {
+                    // If the array itself is messages
+                    messages = parsed;
+                } else if (parsed.messages && Array.isArray(parsed.messages)) {
+                    messages = parsed.messages;
+                } else if (parsed.history && Array.isArray(parsed.history)) {
+                    messages = parsed.history;
+                } else {
+                    // Fallback, just render it as a system message
+                    messages = [{ role: 'system', content: `Raw JSON data from ${path.basename(filePath)}\\n\`\`\`json\\n${JSON.stringify(parsed, null, 2)}\\n\`\`\`` }];
+                }
 
-            // Normalize message format
-            messages = messages.map((m: any) => ({
-                role: m.role || 'system',
-                content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content || m)
-            }));
+                // Normalize message format
+                messages = messages.map((m: any) => ({
+                    role: m.role || 'system',
+                    content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content || m)
+                }));
+            }
 
         } catch (e) {
             // Not JSON, return as markdown
